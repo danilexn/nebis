@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from bideset.models.losses import MTLR_survival_loss, cross_entropy_loss
+from nebis.models.losses import MTLR_survival_loss, cross_entropy_loss
 
 class DownTaskSurvival(nn.Module):
     def __init__(

@@ -1,14 +1,14 @@
 from setuptools import setup, find_packages
 
 setup(
-  name = 'bideset',
+  name = 'nebis',
   packages = find_packages(),
   version = '0.1.0',
   license='MIT',
-  description = 'BiDeSet - Biological Deep Set representations',
+  description = 'nebis - Neural Networks for Biological Set Representations',
   author = 'Daniel Leon Perinan',
   author_email = 'daniel.leon-perinan@mailbox.tu-dresden.de',
-  url = 'https://github.com/danilexn/bideset',
+  url = 'https://github.com/danilexn/nebis',
   keywords = [
     'artificial intelligence',
     'attention mechanism',

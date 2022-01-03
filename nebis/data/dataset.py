@@ -12,7 +12,7 @@ from torch.utils.data import (
     WeightedRandomSampler,
 )
 
-from bideset.utils.metrics import classification_metrics, classification_roc_auc
+from nebis.utils.metrics import classification_metrics, classification_roc_auc
 
 class BaseDataset():
     def __init__(self, config):

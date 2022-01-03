@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from bideset.models.attention import MAB
+from nebis.models.attention import MAB
 
 
 class BasePooler(nn.Module):

@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.profiler
 
-from bideset.utils.schedule import get_linear_schedule_with_warmup
+from nebis.utils.schedule import get_linear_schedule_with_warmup
 
 
 class Base(nn.Module):

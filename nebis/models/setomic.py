@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 
 from transformers import BertModel
-from bideset.models.base import Base
-from bideset.models.downstream import get_downstream
-from bideset.models.pooling import get_pooler
+from nebis.models.base import Base
+from nebis.models.downstream import get_downstream
+from nebis.models.pooling import get_pooler
 
 class SetOmic(Base):
     def __init__(self, config):
