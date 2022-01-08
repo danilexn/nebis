@@ -18,6 +18,7 @@ RUN apt-get update && \
 # Create a working directory
 RUN mkdir /app
 WORKDIR /app
+ADD . /app/nebis
 
 # Create a non-root user and switch to it
 RUN adduser --disabled-password --gecos '' --shell /bin/bash user \
@@ -51,6 +52,9 @@ RUN git clone https://github.com/jerryji1993/DNABERT \
     && python3 -m pip install --editable . \
     && cd examples \
     && python3 -m pip install -r requirements.txt
+
+RUN python3 -m pip install ./nebis \
+    && python3 -m pip install -r ./nebis/requirements.txt
 
 # Set the default command to python3
 CMD ["python3"]
