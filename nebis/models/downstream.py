@@ -3,23 +3,29 @@ import torch.nn as nn
 
 from nebis.models.losses import MTLR_survival_loss, cross_entropy_loss
 
+
 class DownTaskSurvival(nn.Module):
-    def __init__(
-        self, time_num=256, embedding_size=512, p_dropout=0.05, hidden_size=256, device="CUDA"
-    ):
+    def __init__(self, config):
         super(DownTaskSurvival, self).__init__()
 
-        self.device = device
-        self.embedding_size = embedding_size
-        self.time_num = time_num
-        self.p_dropout = p_dropout
-        self.survival_loss = "MTLR"
-        self.DropoutEmbed = nn.Dropout(self.p_dropout)
-        self.LinearEmbed = nn.Linear(self.embedding_size, hidden_size)
-        self.LinearHidden = nn.Linear(hidden_size, hidden_size)
-        self.ActivationHidden = nn.Tanh()
-        self.LinearSurvival = nn.Linear(hidden_size, self.time_num)
+        self.config = config
+        self.DropoutEmbed = nn.Dropout(self.config.p_dropout)
+        self.LinearEmbed = nn.Linear(
+            self.config.embedding_size, self.config.hidden_size
+        )
+        self.LinearHidden = nn.Linear(self.config.hidden_size, self.config.hidden_size)
 
+        if self.config.activation == "sigmoid":
+            self.ActivationDownTaskSurvival = nn.Sigmoid()
+        elif self.config.activation == "relu":
+            self.ActivationDownTaskSurvival = nn.ReLU()
+        elif self.config.activation == "tanh":
+            self.ActivationDownTaskSurvival = nn.Tanh()
+
+        self.LinearSurvival = nn.Linear(self.config.hidden_size, self.config.num_times)
+
+        # TODO: include the option for more types of survival
+        self.survival_loss = "MTLR"
         if self.survival_loss == "MTLR":
             self.tri_matrix_1 = self.get_tri_matrix(dimension_type=1)
             self.tri_matrix_2 = self.get_tri_matrix(dimension_type=2)
@@ -32,34 +38,43 @@ class DownTaskSurvival(nn.Module):
     def forward(self, x):
         x_a = self.DropoutEmbed(x)
         x_a = self.LinearEmbed(x_a)
-        x_a = self.ActivationHidden(x)
-        # x_a = self.LinearHidden(x_a)
+        x_a = self.ActivationDownTaskSurvival(x_a)
         survival = self.LinearSurvival(x_a)
 
         return survival
 
+    # TODO: uncouple from the downstream, include inside loss function
     def get_tri_matrix(self, dimension_type=1):
         """
         Get tensor of the triangular matrix
         """
         if dimension_type == 1:
-            ones_matrix = torch.ones(self.time_num, self.time_num + 1, device=self.device)
+            ones_matrix = torch.ones(
+                self.config.num_times,
+                self.config.num_times + 1,
+                device=self.config.device,
+            )
         else:
             ones_matrix = torch.ones(
-                self.time_num + 1, self.time_num + 1, device=self.device
+                self.config.num_times + 1,
+                self.config.num_times + 1,
+                device=self.config.device,
             )
         tri_matrix = torch.tril(ones_matrix)
         return tri_matrix
 
-    def loss(self, y_pred, y_true, E, weight=None, reduction="mean"):
-        return self.loss_fct(y_pred, y_true, E, self.tri_matrix_1, reduction)
+    def loss(self, pred, target, weight=None, reduction="mean"):
+        E, y_time, y_onehot_time = target
+        pred = pred.view(-1, self.config.num_times)
+        return self.loss_fct(pred, y_onehot_time, E, self.tri_matrix_1, reduction)
 
-    def predict_risk(self, y_out):
+    def prediction(self, y=None):
         """
         Predict the density, survival and hazard function, as well as the risk score
         """
+        y = y.view(-1, self.config.num_times)
         if self.survival_loss == "MTLR":
-            phi = torch.exp(torch.mm(y_out, self.tri_matrix_1))
+            phi = torch.exp(torch.mm(y, self.tri_matrix_1))
             div = torch.repeat_interleave(
                 torch.sum(phi, 1).reshape(-1, 1), phi.shape[1], dim=1
             )
@@ -72,44 +87,54 @@ class DownTaskSurvival(nn.Module):
         risk = torch.sum(cumulative_hazard, 1)
 
         return {
-            "density": density,
-            "survival": survival,
-            "hazard": hazard,
-            "risk": risk,
+            "density": density.cpu().numpy(),
+            "survival": survival.cpu().numpy(),
+            "hazard": hazard.cpu().numpy(),
+            "risk": risk.cpu().numpy(),
         }
 
 
 class DownTaskClassification(nn.Module):
-    def __init__(
-        self, num_labels=33, embedding_size=768, p_dropout=0.05, activation="relu", device="CUDA"
-    ):
-        super(DownTaskSurvival, self).__init__()
-        self.num_labels = num_labels
-        self.embedding_size = embedding_size
-        self.p_dropout = p_dropout
-        self.activation = activation
-        self.device = device
+    def __init__(self, config):
+        super(DownTaskClassification, self).__init__()
+        self.config = config
 
-        self.DropoutDownTaskClassification = nn.Dropout(self.p_dropout)
-        self.LinearDownTaskClassification = nn.Linear(self.embedding_size, self.num_labels, bias=False)
+        self.DropoutDownTaskClassification = nn.Dropout(self.config.p_dropout)
+        self.LinearDownTaskClassification = nn.Linear(
+            self.config.embedding_size, self.config.num_classes, bias=False
+        )
         self.SoftmaxDownTaskClassification = nn.Softmax(dim=1)
-        if self.activation == "sigmoid":
+        if self.config.activation == "sigmoid":
             self.ActivationDownTaskClassification = nn.Sigmoid()
-        elif self.activation == "relu":
+        elif self.config.activation == "relu":
             self.ActivationDownTaskClassification = nn.ReLU()
 
     def forward(self, x):
-        x_embed = self.Dropout(x[:, 0, :])
-        x_embed = self.ActivateFC(x_embed)
-        logits = self.FC_classifier(x_embed)
+        x_embed = self.DropoutDownTaskClassification(x[:, 0, :])
+        x_embed = self.ActivationDownTaskClassification(x_embed)
+        logits = self.LinearDownTaskClassification(x_embed)
 
         return logits
 
-    def loss(self, logits, y, weight=None):
-        return self.cross_entropy_loss(logits, y, weight)
+    def prediction(self, y=None):
+        return {"label": self.SoftmaxDownTaskClassification(y)}
+
+    def loss(self, pred, target, weight=None):
+        target = target[0] if type(target) is list else target
+        target = target.view(-1)
+        pred = pred.view(-1, self.config.num_classes)
+        return cross_entropy_loss(pred, target, weight)
 
 
-_downstream_dict = {"survival": DownTaskSurvival, "classification": DownTaskClassification}
+_downstream_dict = {
+    "survival": DownTaskSurvival,
+    "classification": DownTaskClassification,
+}
+
+
+def list_downstream():
+    return list(_downstream_dict.keys())
+
 
 def get_downstream(name):
     try:

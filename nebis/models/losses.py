@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 
+
 def MTLR_survival_loss(y_pred, y_true, E, tri_matrix, reduction="mean"):
     """
     Compute the MTLR survival loss
@@ -52,8 +53,5 @@ def MTLR_survival_loss(y_pred, y_true, E, tri_matrix, reduction="mean"):
 
 
 def cross_entropy_loss(logits, y, weight):
-    return F.cross_entropy(
-                    logits,
-                    y,
-                    weight=weight,
-                )
+    return F.cross_entropy(logits, y, weight=weight,)
+

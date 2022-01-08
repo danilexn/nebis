@@ -12,6 +12,7 @@ import torch.optim as optim
 import torch.profiler
 
 from nebis.utils.schedule import get_linear_schedule_with_warmup
+from nebis.utils import empty_hook
 
 
 class Base(nn.Module):
@@ -19,17 +20,29 @@ class Base(nn.Module):
         super().__init__()
         self.config = config
 
-    def profiled_fit(self, dataloader, config, *args, **kwargs):
+    def profiled_fit(self, profile_dir, *args, **kwargs):
         with torch.profiler.profile(
             schedule=torch.profiler.schedule(wait=15, warmup=5, active=10, repeat=2),
-            on_trace_ready=torch.profiler.tensorboard_trace_handler(config.profile_dir),
+            on_trace_ready=torch.profiler.tensorboard_trace_handler(profile_dir),
         ) as prof:
-            def hook_step():
+
+            _hook_step = kwargs["hook_step"]
+
+            def hook_step(*args, **kwargs):
+                _hook_step(*args, **kwargs)
                 prof.step()
 
-            self.fit(*args, dataloader, config, hook_step=hook_step, *args, **kwargs)
+            kwargs["hook_step"] = hook_step
+            self.fit(*args, **kwargs)
 
-    def fit(self, dataset_train, dataset_test, config, hook_step=None, hook_epoch=None):
+    def fit(
+        self,
+        dataset_train,
+        dataset_test,
+        config,
+        hook_step=empty_hook,
+        hook_epoch=empty_hook,
+    ):
         optimizer = optim.Adam(
             self.parameters(),
             lr=config.learning_rate,
@@ -39,71 +52,65 @@ class Base(nn.Module):
             amsgrad=False,
         )
 
-        dataloader_train, sample_weight = dataset_train.fitting()
+        dataloader_train, sample_weight = dataset_train
 
         t_steps = len(dataloader_train) * config.epochs
 
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, num_warmup_steps=int(t_steps * config.warmup), num_training_steps=t_steps,
+            optimizer,
+            num_warmup_steps=int(t_steps * config.warmup_percent),
+            num_training_steps=t_steps,
         )
-        
+
         # Starts training phase
         _i_step = 0
         for epoch in tqdm(range(config.epochs), position=0, leave=True):
             self.train()
             predictions = []
-            labels = []
+            targets = []
             embeddings = []
             losses = []
 
             pbar = tqdm(dataloader_train, position=0, leave=False)
             optimizer.zero_grad()
             for batch in pbar:
-                batch = tuple(t.to(self.config.device) for t in batch)
+                # Move targets to device
+                target = [t.to(self.config.device) for t in batch[2]]
 
-                inputs = {
-                    "input_ids": batch[0],
-                    "attention_mask": batch[1],
-                }
+                # Move features to device
+                batch = tuple(t.to(self.config.device) for t in batch[0:2])
+
+                inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
                 Y, H = self.forward(**inputs)
 
-                loss = self.loss(
-                    Y,
-                    H,
-                    weight=sample_weight,
-                )
+                loss = self.loss(Y, target, weight=sample_weight,)
 
                 loss.backward()
                 optimizer.step()
                 optimizer.zero_grad()
                 scheduler.step()
 
-                Y_pred = self.Downstream.prediction()
-
-                predictions += list(Y_pred.detach().cpu().numpy())
-                labels += list(batch[3].detach().cpu().numpy())
-                embeddings.append(H.detach().cpu().numpy())
+                # Save step status
                 losses.append(loss.item())
 
-                try:
-                    self.writer.add_scalar(
-                        "training loss", loss.item(), epoch * len(dataloader_train) + _i_step
-                    )
-                    self.writer.add_scalar(
-                        "learning rate",
-                        scheduler.get_lr()[0],
-                        epoch * len(dataloader_train) + _i_step,
-                    )
-                except:
-                    logging.error("#Could not register the loss")
+                Y_pred = self.Downstream.prediction(Y.detach())
+                predictions += list(Y_pred)
 
-                hook_step()
+                target = [t.detach().cpu().numpy() for t in target]
+                targets += list(target)
+
+                embeddings.append(H.detach().cpu().numpy())
+
+                hook_step(
+                    epoch * len(dataloader_train) + _i_step,
+                    {"loss": loss.item(), "learning rate": scheduler.get_last_lr()[0]},
+                )
                 _i_step += 1
 
             logging.info(
                 "Epoch={},avg-CE-Loss={}".format(epoch, np.array(losses).mean())
             )
-            hook_epoch()
+            hook_epoch(epoch)
 
             if epoch % self.config.chechpoint_save_interval == 0:
                 logging.debug("Saving model checkpoint at Epoch {}".format(epoch))
@@ -111,27 +118,25 @@ class Base(nn.Module):
 
                 logging.debug("Evaluating model at Epoch {}".format(epoch))
                 self.predict(dataset_test)
-                
 
     def save(self, f):
         try:
             model_to_save = self.module if hasattr(self, "module") else self
             torch.save(
-                model_to_save,
-                f,
+                model_to_save, f,
             )
         except:
             raise ExecError("Could not save the model at the specified location")
-        
-    def predict(self, dataset, hook=None):
+
+    def predict(self, dataset_test, hook=None):
         self.eval()
         Ys = []
         Ps = []
         Hs = []
 
-        dataloader = dataset.prediction()
+        dataloader_test = dataset_test
 
-        for batch in tqdm(dataloader, position=0, leave=True):
+        for batch in tqdm(dataloader_test, position=0, leave=True):
             batch = tuple(t.to(self.device) for t in batch)
             inputs = {
                 "input_ids": batch[0],
@@ -152,7 +157,7 @@ class Base(nn.Module):
         return Ys, Ps, Hs
 
 
-class Configurator():
+class Configurator:
     def __init__(self, config):
         super().__init__()
         self.config = config
