@@ -12,7 +12,13 @@ class SurvivalTensor:
             return _size[idx]
 
     def __getitem__(self, i):
-        return [t[i] for t in self.tensors]
+        _ret = []
+        for t in self.tensors:
+            try:
+                _ret.append(t[i])
+            except:
+                _ret.append(t[0])
+        return _ret
 
     def __len__(self):
         return len(self.tensors)
@@ -24,21 +30,3 @@ class SurvivalTensor:
     def __next__(self):
         self.idx += 1
         return self[self.idx]
-
-
-class SurvivalBatchTensor:
-    def __init__(self, tensors) -> None:
-        assert tensors is not None
-        self.tensors = tensors
-
-    def to(self, device):
-        self.tensors = (t.to(device) for t in self.tensors)
-
-    def detach(self):
-        self.tensors = (t.detach() for t in self.tensors)
-
-    def cpu(self):
-        self.tensors = (t.cpu() for t in self.tensors)
-
-    def numpy(self):
-        self.tensors = (t.numpy() for t in self.tensors)

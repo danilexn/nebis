@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import logging
+import os
 from shutil import ExecError
 
 import numpy as np
@@ -114,7 +115,10 @@ class Base(nn.Module):
 
             if epoch % self.config.chechpoint_save_interval == 0:
                 logging.debug("Saving model checkpoint at Epoch {}".format(epoch))
-                self.save()
+                model_path = os.path.join(
+                    self.config.model_out, "model_checkpoint_epoch_{}.pth".format(epoch)
+                )
+                self.save(model_path)
 
                 logging.debug("Evaluating model at Epoch {}".format(epoch))
                 self.predict(dataset_test)
@@ -137,19 +141,22 @@ class Base(nn.Module):
         dataloader_test = dataset_test
 
         for batch in tqdm(dataloader_test, position=0, leave=True):
-            batch = tuple(t.to(self.device) for t in batch)
-            inputs = {
-                "input_ids": batch[0],
-                "attention_mask": batch[1],
-            }
+            # Move targets to device
+            target = [t.to(self.config.device) for t in batch[2]]
+
+            # Move features to device
+            batch = tuple(t.to(self.config.device) for t in batch[0:2])
+
+            inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
 
             with torch.no_grad():
                 Y, H = self.forward(**inputs)
 
-            Y_pred = self.Downstream.prediction()
+            Y_pred = self.Downstream.prediction(Y.detach())
+            target = [t.detach().cpu().numpy() for t in target]
 
-            Ps += list(Y_pred.detach().cpu().numpy())
-            Ys += list(Y.detach().cpu().numpy())
+            Ps.append([Y, Y_pred])
+            Ys.append(target)
             Hs.append(H.detach().cpu().numpy())
 
         Hs = np.concatenate(np.array(Hs)).reshape(len(Ps), -1)

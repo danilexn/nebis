@@ -1,12 +1,30 @@
 import argparse
 from nebis.models.downstream import list_downstream
 from nebis.models.pooling import list_pooler
+from nebis.models import list_models
 
 
 def argument_parser():
     parser = argparse.ArgumentParser()
 
-    # Required parameters
+    _models = list_models()
+    parser.add_argument(
+        "--model",
+        default="setquence" if "setquence" in _models else _models[0],
+        choices=_models,
+        type=str,
+        help="What model to train; e.g., setquence",
+    )
+    _downstream_tasks = list_downstream()
+    parser.add_argument(
+        "--downstream",
+        default="classification"
+        if "classification" in _downstream_tasks
+        else _downstream_tasks[0],
+        choices=_downstream_tasks,
+        type=str,
+        help="Type of downstream task",
+    )
     parser.add_argument(
         "--kmer",
         default=6,
@@ -59,23 +77,19 @@ def argument_parser():
         type=str,
         help="Activation function, can be Sigmoid, ReLU",
     )
-
-    _downstream_tasks = list_downstream()
-    parser.add_argument(
-        "--downstream",
-        default="classification"
-        if "classification" in _downstream_tasks
-        else _downstream_tasks[0],
-        choices=_downstream_tasks,
-        type=str,
-        help="Type of downstream task",
-    )
     parser.add_argument(
         "--checkpoint_interval",
         default=5,
         type=int,
         required=False,
         help="The checkpointing frequency respect to the number of training epochs",
+    )
+    parser.add_argument(
+        "--pretrained_bert_in",
+        default=None,
+        type=str,
+        required=True,
+        help="Pretrained BERT model",
     )
     parser.add_argument(
         "--model_out",

@@ -80,10 +80,12 @@ class MutationDatasetForSurvival(DatasetForSurvival):
 
         all_surv_E = _torch_data[6]
         all_T = _torch_data[7]
-        all_surv_T = get_survival_y_true(all_T, all_surv_E, self.config.num_times)
+        all_surv_T, time_points = get_survival_y_true(
+            all_T, all_surv_E, self.config.num_times
+        )
 
         seq_features = _input_ids
-        targets = SurvivalTensor((all_surv_E, all_T, all_surv_T))
+        targets = SurvivalTensor((all_surv_E, all_T, all_surv_T, time_points))
         dataset = TensorDataset(seq_features, seq_features, targets)
 
         return dataset
@@ -117,11 +119,13 @@ class OmicDatasetForSurvival(DatasetForSurvival):
 
         all_surv_E = _torch_data[6]
         all_T = _torch_data[7]
-        all_surv_T = get_survival_y_true(all_T, all_surv_E, self.config.num_times)
+        all_surv_T, time_points = get_survival_y_true(
+            all_T, all_surv_E, self.config.num_times
+        )
 
         seq_features = _input_ids
         numeric_features = _expression
-        targets = SurvivalTensor((all_surv_E, all_T, all_surv_T))
+        targets = SurvivalTensor((all_surv_E, all_T, all_surv_T, time_points))
         dataset = TensorDataset(seq_features, numeric_features, targets)
 
         return dataset

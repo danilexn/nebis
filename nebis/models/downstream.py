@@ -64,7 +64,7 @@ class DownTaskSurvival(nn.Module):
         return tri_matrix
 
     def loss(self, pred, target, weight=None, reduction="mean"):
-        E, y_time, y_onehot_time = target
+        E, y_time, y_onehot_time, time_num = target
         pred = pred.view(-1, self.config.num_times)
         return self.loss_fct(pred, y_onehot_time, E, self.tri_matrix_1, reduction)
 
@@ -87,6 +87,7 @@ class DownTaskSurvival(nn.Module):
         risk = torch.sum(cumulative_hazard, 1)
 
         return {
+            "predicted": y.cpu().numpy(),
             "density": density.cpu().numpy(),
             "survival": survival.cpu().numpy(),
             "hazard": hazard.cpu().numpy(),
@@ -117,7 +118,10 @@ class DownTaskClassification(nn.Module):
         return logits
 
     def prediction(self, y=None):
-        return {"label": self.SoftmaxDownTaskClassification(y)}
+        return {
+            "predicted": y.detach().cpu().numpy(),
+            "label": self.SoftmaxDownTaskClassification(y).detach().cpu().numpy(),
+        }
 
     def loss(self, pred, target, weight=None):
         target = target[0] if type(target) is list else target
