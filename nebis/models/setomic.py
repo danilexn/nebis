@@ -7,25 +7,37 @@ from nebis.models.base import Base
 from nebis.models.downstream import get_downstream
 from nebis.models.pooling import get_pooler
 
+
 class SetOmic(Base):
-    def __init__(self, config):
+    def __init__(self, config, BERT=None):
         super().__init__(config)
-        self.BERT = BertModel(self.config.bert_config)
+        self.BERT = BertModel(self.config.bert_config) if BERT is None else BERT
         self.BertNorm = nn.LayerNorm(self.config.embedding_size)
 
-        self.PoolerMutome = get_pooler(self.config.pooling_mutome)(self.config)
-        self.PoolerOmics = get_pooler(self.config.pooling_omics)(self.config)
+        self.OmicEmbedding = nn.Embedding(
+            self.config.max_numeric + 2, self.config.embedding_size, padding_idx=0
+        )
+        self.OmicLevelEmbedding = nn.Embedding(
+            self.config.digitize_bins + 2, self.config.embedding_size, padding_idx=0
+        )
+        self.OmicPosIdentifiers = nn.Parameter(
+            torch.arange(1, self.config.max_numeric + 2, 1), requires_grad=False,
+        )
+
+        self.PoolerMutome = get_pooler(self.config.pooling_sequence)(self.config)
+        self.PoolerOmics = get_pooler(self.config.pooling_numeric)(self.config)
         self.Downstream = get_downstream(self.config.downstream)(self.config)
         self.loss = self.Downstream.loss
 
         # self.init_weights()
 
-    def forward(self, X_mutome=None, X_omic=None):
+    def forward(self, X_mutome=None, X_omics=None):
         # Select only the sequences that are not fully padded, up to split
-        input_ids = X_mutome.view(-1, self.sequence_length)
+        input_ids = X_mutome.view(-1, self.config.sequence_length)
         attention_mask = torch.where(input_ids > 0, 1, 0).to(self.config.device)
         batch_size = int(
-            input_ids.flatten().shape[0] / (self.sequence_length * self.split)
+            input_ids.flatten().shape[0]
+            / (self.config.sequence_length * self.config.max_mutations)
         )
 
         with torch.no_grad():
@@ -44,7 +56,7 @@ class SetOmic(Base):
         X_pos_omic_embed = self.OmicEmbedding(
             self.OmicPosIdentifiers.repeat(batch_size, 1)
         )
-        X_lev_omic_embed = self.OmicLevelEmbedding(X_omic)
+        X_lev_omic_embed = self.OmicLevelEmbedding(X_omics)
         X_omics = X_pos_omic_embed[:, 1:, :] + X_lev_omic_embed
 
         # Input is the encoding of BERT
@@ -55,6 +67,7 @@ class SetOmic(Base):
         H_omics = self.PoolerOmics(X_omics)
 
         H = H_mutome[:, 0, :] + H_omics[:, 0, :]
+        H = H.view(-1, 1, self.config.embedding_size)
         Y = self.Downstream(H)
 
         # (downstream output, embeddings)
