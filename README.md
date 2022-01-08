@@ -11,7 +11,7 @@
 We recommend using the provided Docker container, that is already set-up with all dependencies. This container is based on with CUDA 10.0 running under Ubuntu 18.04.
 
 ```
-docker pull https://github.com/danilexn/nebis
+docker pull ghcr.io/danilexn/nebis/nebis:master
 docker run danilexn/nebis:latest
 ```
 
