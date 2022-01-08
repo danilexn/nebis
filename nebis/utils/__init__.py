@@ -39,7 +39,7 @@ def get_survival_y_true(T, E, num_times):
             y_true_i[time_index:] = 1
             y_true.append(y_true_i)
 
-    return y_true
+    return y_true, time_points
 
 
 def get_time_points(T_max, num_times, extra_time_percent=0.1):
