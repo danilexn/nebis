@@ -3,7 +3,7 @@ import os
 from torch.utils.tensorboard import SummaryWriter
 from torch.nn import DataParallel
 
-from nebis.data import get_dataset
+from nebis.data import get_datareader
 from nebis.models import get_model
 from nebis.utils.args import argument_parser
 from nebis.utils import set_seed
@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     model.to(args.device)
 
-    dataset = get_dataset("{}_{}".format(args.model, args.downstream))(args)
+    dataset = get_datareader("{}_{}".format(args.model, args.downstream))(args)
     dataset.load()
 
     batch_size = args.single_batch * args.n_gpu
