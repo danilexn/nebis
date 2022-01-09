@@ -168,3 +168,108 @@ class Configurator:
     def __init__(self, config):
         super().__init__()
         self.config = config
+
+
+def profiled_parallel_fit(profile_dir, *args, **kwargs):
+    with torch.profiler.profile(
+        schedule=torch.profiler.schedule(wait=15, warmup=5, active=10, repeat=2),
+        on_trace_ready=torch.profiler.tensorboard_trace_handler(profile_dir),
+    ) as prof:
+
+        _hook_step = kwargs["hook_step"]
+
+        def hook_step(*args, **kwargs):
+            _hook_step(*args, **kwargs)
+            prof.step()
+
+        kwargs["hook_step"] = hook_step
+        parallel_fit(*args, **kwargs)
+
+
+def parallel_fit(
+    model,
+    dataset_train,
+    dataset_test,
+    config,
+    hook_step=empty_hook,
+    hook_epoch=empty_hook,
+):
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=config.learning_rate,
+        betas=(0.9, 0.999),
+        eps=1e-08,
+        weight_decay=config.weight_decay,
+        amsgrad=False,
+    )
+
+    dataloader_train, sample_weight = dataset_train
+
+    t_steps = len(dataloader_train) * config.epochs
+
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=int(t_steps * config.warmup_percent),
+        num_training_steps=t_steps,
+    )
+
+    # Starts training phase
+    _i_step = 0
+    for epoch in tqdm(range(config.epochs), position=0, leave=True):
+        model.train()
+        predictions = []
+        targets = []
+        embeddings = []
+        losses = []
+
+        pbar = tqdm(dataloader_train, position=0, leave=False)
+        optimizer.zero_grad()
+        for batch in pbar:
+            # Move targets to device
+            if torch.is_tensor(batch[2]):
+                target = batch[2].to(model.module.config.device)
+            else:
+                target = [t.to(model.module.config.device) for t in batch[2]]
+
+            # Move features to device
+            batch = tuple(t.to(model.module.config.device) for t in batch[0:2])
+
+            inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
+            Y, H = model.forward(**inputs)
+
+            loss = model.module.loss(Y, target, weight=sample_weight,)
+
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            scheduler.step()
+
+            # Save step status
+            losses.append(loss.item())
+
+            Y_pred = model.module.Downstream.prediction(Y.detach())
+            predictions += list(Y_pred)
+
+            target = [t.detach().cpu().numpy() for t in target]
+            targets += list(target)
+
+            embeddings.append(H.detach().cpu().numpy())
+
+            hook_step(
+                epoch * len(dataloader_train) + _i_step,
+                {"loss": loss.item(), "learning rate": scheduler.get_last_lr()[0]},
+            )
+            _i_step += 1
+
+        logging.info("Epoch={},avg-CE-Loss={}".format(epoch, np.array(losses).mean()))
+        hook_epoch(epoch)
+
+        if epoch % config.chechpoint_save_interval == 0:
+            logging.debug("Saving model checkpoint at Epoch {}".format(epoch))
+            model_path = os.path.join(
+                config.model_out, "model_checkpoint_epoch_{}.pth".format(epoch)
+            )
+            model.module.save(model_path)
+
+            logging.debug("Evaluating model at Epoch {}".format(epoch))
+            model.module.predict(dataset_test)

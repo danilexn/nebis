@@ -4,7 +4,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.nn import DataParallel
 
 from nebis.data import get_datareader
-from nebis.models import get_model
+from nebis.models import get_model, parallel_fit, profiled_parallel_fit
 from nebis.utils.args import argument_parser
 from nebis.utils import set_seed
 
@@ -50,7 +50,8 @@ if __name__ == "__main__":
             hook_step=hook_step,
         )
     else:
-        model.module.fit(
+        parallel_fit(
+            model,
             dataset.fitting(batch_size=batch_size),
             dataset.predicting(),
             args,

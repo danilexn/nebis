@@ -1,6 +1,6 @@
 from .setquence import SetQuence, SetQuenceConsensus
 from .setomic import SetOmic, SetOmicConsensus
-from .base import Base
+from .base import Base, parallel_fit, profiled_parallel_fit
 
 _models = {
     "setquence": SetQuence,
