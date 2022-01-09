@@ -84,9 +84,9 @@ class Base(nn.Module):
                     target = [t.to(self.config.device) for t in batch[2]]
 
                 # Move features to device
-                batch = tuple(t.to(self.config.device) for t in batch[0:2])
+                _batch = tuple(t.to(self.config.device) for t in batch[0:2])
 
-                inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
+                inputs = {"X_mutome": _batch[0], "X_omics": _batch[1]}
                 Y, H = self.forward(**inputs)
 
                 loss = self.loss(Y, target, weight=sample_weight,)
@@ -159,9 +159,9 @@ class Base(nn.Module):
                 target = [t.to(self.config.device) for t in batch[2]]
 
             # Move features to device
-            batch = tuple(t.to(self.config.device) for t in batch[0:2])
+            _batch = tuple(t.to(self.config.device) for t in batch[0:2])
 
-            inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
+            inputs = {"X_mutome": _batch[0], "X_omics": _batch[1]}
 
             with torch.no_grad():
                 Y, H = self.forward(**inputs)
@@ -212,9 +212,9 @@ def parallel_predict(model, dataset_test, hook=None):
             target = [t.to(model.module.config.device) for t in batch[2]]
 
         # Move features to device
-        batch = tuple(t.to(model.module.config.device) for t in batch[0:2])
+        _batch = tuple(t.to(model.module.config.device) for t in batch[0:2])
 
-        inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
+        inputs = {"X_mutome": _batch[0], "X_omics": _batch[1]}
 
         with torch.no_grad():
             Y, H = model.forward(**inputs)
@@ -280,9 +280,9 @@ def parallel_fit(
                 target = [t.to(model.module.config.device) for t in batch[2]]
 
             # Move features to device
-            batch = tuple(t.to(model.module.config.device) for t in batch[0:2])
+            _batch = tuple(t.to(model.module.config.device) for t in batch[0:2])
 
-            inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
+            inputs = {"X_mutome": _batch[0], "X_omics": _batch[1]}
             Y, H = model.forward(**inputs)
 
             loss = model.module.loss(Y, target, weight=sample_weight,)
