@@ -1,11 +1,12 @@
 from .setquence import SetQuence, SetQuenceConsensus
-from .setomic import SetOmic
+from .setomic import SetOmic, SetOmicConsensus
 from .base import Base
 
 _models = {
     "setquence": SetQuence,
     "setomic": SetOmic,
     "setquenceconsensus": SetQuenceConsensus,
+    "setomicconsensus": SetOmicConsensus,
 }
 
 
