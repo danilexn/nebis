@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import datetime
 
 from torch.utils.tensorboard import SummaryWriter
 from torch.nn import DataParallel
@@ -10,6 +11,8 @@ from nebis.utils.args import argument_parser
 from nebis.utils import set_seed
 
 from transformers import BertModel
+
+DATE = datetime.today().strftime("%Y%m%d%H%M%S")
 
 
 def hook_step(step, values):
@@ -25,9 +28,33 @@ if __name__ == "__main__":
     args = parser.parse_args()
     set_seed(args)
 
+    tb_dir = os.path.join(
+        args.log_dir,
+        "SetOmic_pretrain_{}_{}_{}_{}_{}_{}".format(
+            DATE,
+            args.digitize_bins,
+            args.p_dropout,
+            args.learning_rate,
+            args.pooling_sequence,
+            args.activation,
+        ),
+    )
+
+    if not os.path.exists(args.log_dir):
+        logging.debug("#Creating logging directory at {}".format(args.log_dir))
+        os.makedirs(args.log_dir)
+
+    if not os.path.exists(tb_dir):
+        logging.debug("#Creating TensorBoard directory at {}".format(tb_dir))
+        os.makedirs(tb_dir)
+
     # TensorBoard writer
-    logging.info("Configuring SummaryWriter at {}".format(args.log_dir))
-    writer = SummaryWriter(args.log_dir)
+    logging.info("Configuring SummaryWriter at {}".format(tb_dir))
+    writer = SummaryWriter(tb_dir)
+
+    if not os.path.exists(args.model_out):
+        logging.debug("#Creating output directory at {}".format(args.model_out))
+        os.makedirs(args.model_out)
 
     # Load BERT config
     logging.info("Loading DNABERT model from {}".format(args.pretrained_bert_in))
