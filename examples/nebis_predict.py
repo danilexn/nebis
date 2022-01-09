@@ -2,7 +2,7 @@ import os
 import logging
 
 from torch.utils.tensorboard import SummaryWriter
-import torch.load as load
+import torch
 from torch.nn import DataParallel
 
 from nebis.data import get_datareader
@@ -36,9 +36,19 @@ if __name__ == "__main__":
     pretrained_bert = BertModel.from_pretrained(args.pretrained_bert_in)
     args.bert_config = pretrained_bert.config
 
+    if args.model_in is not None:
+        if os.path.isdir(args.model_in):
+            args.model_in = os.path.join(args.model_in, "model.pth")
+            if not os.path.exists(args.model_in):
+                raise FileNotFoundError(
+                    "The specified path {} does not contain a pytorch model".format(
+                        args.model_in
+                    )
+                )
+
     # Load model
     logging.info("Loading '{}' model from {}".format(args.model, args.model_in))
-    model = load(args.model_in)
+    model = torch.load(args.model_in)
     model.to(args.device)
 
     # Create model
