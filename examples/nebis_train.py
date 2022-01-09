@@ -52,7 +52,7 @@ if __name__ == "__main__":
     if not isinstance(model, DataParallel):
         model.fit(
             dataset.fitting(batch_size=batch_size),
-            dataset.predicting(),
+            dataset.predicting(batch_size=batch_size),
             args,
             hook_step=hook_step,
         )
@@ -60,7 +60,7 @@ if __name__ == "__main__":
         parallel_fit(
             model,
             dataset.fitting(batch_size=batch_size),
-            dataset.predicting(),
+            dataset.predicting(batch_size=batch_size),
             args,
             hook_step=hook_step,
         )

@@ -136,8 +136,9 @@ class Base(nn.Module):
             torch.save(
                 model_to_save, f,
             )
-        except:
-            raise ExecError("Could not save the model at the specified location")
+        except Exception as e:
+            print(e)
+            print("Could not save the model at the specified location")
 
     def predict(self, dataset_test, hook=None):
         self.eval()
@@ -194,6 +195,40 @@ def profiled_parallel_fit(profile_dir, *args, **kwargs):
 
         kwargs["hook_step"] = hook_step
         parallel_fit(*args, **kwargs)
+
+
+def parallel_predict(model, dataset_test, hook=None):
+    model.eval()
+    Ys = []
+    Ps = []
+    Hs = []
+
+    dataloader_test = dataset_test
+
+    for batch in tqdm(dataloader_test, position=0, leave=True):
+        if torch.is_tensor(batch[2]):
+            target = batch[2].to(model.module.config.device)
+        else:
+            target = [t.to(model.module.config.device) for t in batch[2]]
+
+        # Move features to device
+        batch = tuple(t.to(model.module.config.device) for t in batch[0:2])
+
+        inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
+
+        with torch.no_grad():
+            Y, H = model.forward(**inputs)
+
+        Y_pred = model.module.Downstream.prediction(Y.detach())
+        target = [t.detach().cpu().numpy() for t in target]
+
+        Ps.append([Y, Y_pred])
+        Ys.append(target)
+        Hs.append(H.detach().cpu().numpy())
+
+    Hs = np.concatenate(np.array(Hs)).reshape(len(Ps), -1)
+
+    return Ys, Ps, Hs
 
 
 def parallel_fit(
@@ -282,4 +317,6 @@ def parallel_fit(
             model.module.save(model_path)
 
             logging.debug("Evaluating model at Epoch {}".format(epoch))
-            model.module.predict(dataset_test)
+            Ys, Ps, Hs = parallel_predict(model, dataset_test)
+            evaluator = get_evaluator(model.module.config.downstream)(Ys, Ps)
+            evaluator.evaluate()
