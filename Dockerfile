@@ -1,4 +1,4 @@
-FROM nvidia/cuda:10.0-base-ubuntu18.04
+FROM pytorch/pytorch:1.6.0-cuda10.1-cudnn7-runtime
 
 # Install some basic utilities
 RUN apt-get update && apt-get install -y \
@@ -45,6 +45,19 @@ RUN conda install -y -c pytorch \
     "pytorch=1.3.1=py3.7_cuda10.0.130_cudnn7.6.3_0" \
     "torchvision=0.4.2=py37_cu100" \
     && conda clean -ya
+
+RUN conda install -y -c paperspace \
+    jupyter \
+    mock \
+    certifi \
+    configparser \
+    enum34 \
+    funcsigs \
+    pathlib2 \
+    pbr \
+    scandir \
+    singledispatch \
+    webencodings
 
 RUN git clone https://github.com/jerryji1993/DNABERT \
     && cd DNABERT \
