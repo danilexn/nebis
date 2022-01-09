@@ -14,6 +14,7 @@ import torch.profiler
 
 from nebis.utils.schedule import get_linear_schedule_with_warmup
 from nebis.utils import empty_hook
+from nebis.utils.evaluate import get_evaluator
 
 
 class Base(nn.Module):
@@ -121,7 +122,9 @@ class Base(nn.Module):
                 self.save(model_path)
 
                 logging.debug("Evaluating model at Epoch {}".format(epoch))
-                self.predict(dataset_test)
+                Ys, Ps, Hs = self.predict(dataset_test)
+                evaluator = get_evaluator(self.config.downstream)(Ys, Ps)
+                evaluator.evaluate()
 
     def save(self, f):
         try:
