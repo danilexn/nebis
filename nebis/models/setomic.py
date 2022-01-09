@@ -13,6 +13,7 @@ class SetOmic(Base):
         super().__init__(config)
         self.BERT = BertModel(self.config.bert_config) if BERT is None else BERT
         self.BertNorm = nn.LayerNorm(self.config.embedding_size)
+        self.OmicNorm = nn.LayerNorm(self.config.embedding_size)
 
         self.OmicEmbedding = nn.Embedding(
             self.config.max_numeric + 2, self.config.embedding_size, padding_idx=0
@@ -63,8 +64,8 @@ class SetOmic(Base):
         H_mutome = self.BertNorm(X_mutome)
         H_mutome = self.PoolerMutome(H_mutome)
 
-        # TODO: normalise omics
-        H_omics = self.PoolerOmics(X_omics)
+        H_omics = self.OmicNorm(X_omics)
+        H_omics = self.PoolerOmics(H_omics)
 
         H = H_mutome[:, 0, :] + H_omics[:, 0, :]
         H = H.view(-1, 1, self.config.embedding_size)
