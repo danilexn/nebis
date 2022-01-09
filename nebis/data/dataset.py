@@ -28,8 +28,8 @@ class BaseDataset:
     def load_test_train(self, path=None):
         data_dir = self.config.data_dir if path is None else path
         self.dataset = (
-            self._load_torch(os.path.join(data_dir, "train.torch"), False),
-            self._load_torch(os.path.join(data_dir, "dev.torch"), True),
+            self._load_torch(os.path.join(data_dir, "train.torch")),
+            self._load_torch(os.path.join(data_dir, "dev.torch")),
         )
 
     def load(self, path=None):
