@@ -25,12 +25,23 @@ class BaseDataset:
     def _load_torch(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def load(self, path=None):
+    def load_test_train(self, path=None):
         data_dir = self.config.data_dir if path is None else path
         self.dataset = (
-            self._load_torch(data_dir, False),
-            self._load_torch(data_dir, True),
+            self._load_torch(os.path.join(data_dir, "train.torch"), False),
+            self._load_torch(os.path.join(data_dir, "dev.torch"), True),
         )
+
+    def load(self, path=None):
+        data_dir = self.config.data_dir if path is None else path
+        self.dataset = self._load_torch(data_dir)
+
+    def inference(self, batch_size=1):
+        inference = self.dataset
+        sampler = SequentialSampler(inference)
+        dataloader = DataLoader(inference, sampler=sampler, batch_size=batch_size,)
+
+        return dataloader
 
     def fitting(self, *args, **kwargs):
         raise NotImplementedError()
@@ -63,13 +74,9 @@ class DatasetForSurvival(BaseDataset):
 
 
 class MutationDatasetForSurvival(DatasetForSurvival):
-    def _load_torch(self, data_dir, evaluate=True):
+    def _load_torch(self, data_dir):
 
-        cached_features_file = (
-            os.path.join(data_dir, "dev.torch")
-            if evaluate
-            else os.path.join(data_dir, "train.torch")
-        )
+        cached_features_file = data_dir
 
         if os.path.exists(cached_features_file):
             _torch_data = torch.load(cached_features_file)
@@ -92,13 +99,9 @@ class MutationDatasetForSurvival(DatasetForSurvival):
 
 
 class OmicDatasetForSurvival(DatasetForSurvival):
-    def _load_torch(self, data_dir, evaluate=True):
+    def _load_torch(self, data_dir):
 
-        cached_features_file = (
-            os.path.join(data_dir, "dev.torch")
-            if evaluate
-            else os.path.join(data_dir, "train.torch")
-        )
+        cached_features_file = data_dir
 
         if os.path.exists(cached_features_file):
             _torch_data = torch.load(cached_features_file)
@@ -195,13 +198,9 @@ class DatasetForClassification(BaseDataset):
 
 
 class OmicDatasetForClassification(DatasetForClassification):
-    def _load_torch(self, data_dir, evaluate=True):
+    def _load_torch(self, data_dir):
 
-        cached_features_file = (
-            os.path.join(data_dir, "dev.torch")
-            if evaluate
-            else os.path.join(data_dir, "train.torch")
-        )
+        cached_features_file = data_dir
 
         if os.path.exists(cached_features_file):
             _torch_data = torch.load(cached_features_file)
@@ -228,13 +227,9 @@ class OmicDatasetForClassification(DatasetForClassification):
 
 
 class MutationDatasetForClassification(DatasetForClassification):
-    def _load_torch(self, data_dir, evaluate=True):
+    def _load_torch(self, data_dir):
 
-        cached_features_file = (
-            os.path.join(data_dir, "dev.torch")
-            if evaluate
-            else os.path.join(data_dir, "train.torch")
-        )
+        cached_features_file = data_dir
 
         if os.path.exists(cached_features_file):
             _torch_data = torch.load(cached_features_file)

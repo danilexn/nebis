@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
     logging.info("Reading dataset")
     dataset = get_datareader("{}_{}".format(args.model, args.downstream))(args)
-    dataset.load()
+    dataset.load_test_train()
 
     logging.info("Training model")
     batch_size = args.single_batch * args.n_gpu

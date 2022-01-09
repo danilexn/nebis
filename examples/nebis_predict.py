@@ -3,9 +3,10 @@ import logging
 
 from torch.utils.tensorboard import SummaryWriter
 import torch.load as load
+from torch.nn import DataParallel
 
 from nebis.data import get_datareader
-from nebis.models import get_model
+from nebis.models import get_model, parallel_predict
 from nebis.utils.args import argument_parser
 from nebis.utils import set_seed
 from nebis.utils.evaluate import get_evaluator
@@ -40,11 +41,25 @@ if __name__ == "__main__":
     model = load(args.model_in)
     model.to(args.device)
 
-    dataset = get_datareader("{}_{}".format(args.model, args.downstream))(args)
-    dataset.load()
+    # Create model
+    logging.info("Creating '{}' model".format(args.model))
+    model = get_model(args.model)(args, BERT=pretrained_bert)
+    if args.n_gpu > 1:
+        logging.info("Parallelising model over {} GPUs".format(args.n_gpu))
+        model = DataParallel(model)
 
-    batch_size = args.single_batch
-    Ys, Ps, Hs = model.predict(dataset.predicting())
+    model.to(args.device)
+
+    logging.info("Reading dataset")
+    dataset = get_datareader("{}_{}".format(args.model, args.downstream))(args)
+    dataset.load(args.data_dir)
+
+    logging.info("Running inference")
+    batch_size = args.single_batch * args.n_gpu
+    if not isinstance(model, DataParallel):
+        Ys, Ps, Hs = model.predict(dataset.inference(batch_size=batch_size),)
+    else:
+        Ys, Ps, Hs = parallel_predict(model, dataset.inference(batch_size=batch_size),)
 
     evaluator = get_evaluator(args.downstream)(Ys, Ps)
     evaluation = evaluator.evaluate()
