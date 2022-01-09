@@ -102,7 +102,10 @@ class Base(nn.Module):
                 Y_pred = self.Downstream.prediction(Y.detach())
                 predictions += list(Y_pred)
 
-                target = [t.detach().cpu().numpy() for t in target]
+                if torch.is_tensor(batch[2]):
+                    target = target.detach().cpu().numpy()
+                else:
+                    target = [t.detach().cpu().numpy() for t in target]
                 targets += list(target)
 
                 embeddings.append(H.detach().cpu().numpy())
@@ -164,21 +167,18 @@ class Base(nn.Module):
                 Y, H = self.forward(**inputs)
 
             Y_pred = self.Downstream.prediction(Y.detach())
-            target = [t.detach().cpu().numpy() for t in target]
+            if torch.is_tensor(batch[2]):
+                target = target.detach().cpu().numpy()
+            else:
+                target = [t.detach().cpu().numpy() for t in target]
 
             Ps.append([Y, Y_pred])
             Ys.append(target)
             Hs.append(H.detach().cpu().numpy())
 
-        Hs = np.concatenate(np.array(Hs)).reshape(len(Ps), -1)
+        Hs = np.concatenate(Hs).reshape(len(dataloader_test.dataset), -1)
 
         return Ys, Ps, Hs
-
-
-class Configurator:
-    def __init__(self, config):
-        super().__init__()
-        self.config = config
 
 
 def profiled_parallel_fit(profile_dir, *args, **kwargs):
@@ -220,13 +220,16 @@ def parallel_predict(model, dataset_test, hook=None):
             Y, H = model.forward(**inputs)
 
         Y_pred = model.module.Downstream.prediction(Y.detach())
-        target = [t.detach().cpu().numpy() for t in target]
+        if torch.is_tensor(batch[2]):
+            target = target.detach().cpu().numpy()
+        else:
+            target = [t.detach().cpu().numpy() for t in target]
 
         Ps.append([Y, Y_pred])
         Ys.append(target)
         Hs.append(H.detach().cpu().numpy())
 
-    Hs = np.concatenate(np.array(Hs)).reshape(len(Ps), -1)
+    Hs = np.concatenate(Hs).reshape(len(dataloader_test.dataset), -1)
 
     return Ys, Ps, Hs
 
@@ -295,7 +298,10 @@ def parallel_fit(
             Y_pred = model.module.Downstream.prediction(Y.detach())
             predictions += list(Y_pred)
 
-            target = [t.detach().cpu().numpy() for t in target]
+            if torch.is_tensor(batch[2]):
+                target = target.detach().cpu().numpy()
+            else:
+                target = [t.detach().cpu().numpy() for t in target]
             targets += list(target)
 
             embeddings.append(H.detach().cpu().numpy())

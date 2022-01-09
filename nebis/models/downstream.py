@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 
 from nebis.models.losses import MTLR_survival_loss, cross_entropy_loss
 
@@ -120,7 +121,9 @@ class DownTaskClassification(nn.Module):
     def prediction(self, y=None):
         return {
             "predicted": y.detach().cpu().numpy(),
-            "label": self.SoftmaxDownTaskClassification(y).detach().cpu().numpy(),
+            "label": np.argmax(
+                self.SoftmaxDownTaskClassification(y).detach().cpu().numpy(), axis=1
+            ),
         }
 
     def loss(self, pred, target, weight=None):
