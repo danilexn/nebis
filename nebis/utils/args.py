@@ -92,6 +92,13 @@ def argument_parser():
         help="Pretrained BERT model",
     )
     parser.add_argument(
+        "--model_in",
+        default=None,
+        type=str,
+        required=False,
+        help="Where to load a trained model from",
+    )
+    parser.add_argument(
         "--model_out",
         default=None,
         type=str,

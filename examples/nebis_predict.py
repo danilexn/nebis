@@ -1,7 +1,8 @@
 import os
+import logging
 
 from torch.utils.tensorboard import SummaryWriter
-from torch.nn import DataParallel
+import torch.load as load
 
 from nebis.data import get_datareader
 from nebis.models import get_model
@@ -26,27 +27,23 @@ if __name__ == "__main__":
     set_seed(args)
 
     # TensorBoard writer
+    logging.info("Configuring SummaryWriter at {}".format(args.log_dir))
     writer = SummaryWriter(args.log_dir)
 
     # Load BERT config
+    logging.info("Loading DNABERT model from {}".format(args.pretrained_bert_in))
     pretrained_bert = BertModel.from_pretrained(args.pretrained_bert_in)
     args.bert_config = pretrained_bert.config
 
-    # Create model
-    model = get_model(args.model)(args, BERT=pretrained_bert)
-    if args.n_gpu >= 1:
-        model = DataParallel(model)
-
-    model.to(args.device)
+    # Load model
+    logging.info("Loading '{}' model from {}".format(args.model, args.model_in))
+    model = load(args.model_in)
 
     dataset = get_datareader("{}_{}".format(args.model, args.downstream))(args)
     dataset.load()
 
-    batch_size = args.single_batch * args.n_gpu
-    if not isinstance(model, DataParallel):
-        Ys, Ps, Hs = model.predict(dataset.predicting())
-    else:
-        Ys, Ps, Hs = model.module.predict(dataset.predicting())
+    batch_size = args.single_batch
+    Ys, Ps, Hs = model.predict(dataset.predicting())
 
     evaluator = get_evaluator(args.downstream)(Ys, Ps)
     evaluation = evaluator.evaluate()
