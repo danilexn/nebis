@@ -79,6 +79,9 @@ class SetQuence(Base):
         # (downstream output, embeddings)
         return Y, H
 
+    def explain(self):
+        pass
+
 
 class ConsensusPooler(Base):
     def __init__(self, config):

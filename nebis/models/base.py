@@ -77,7 +77,11 @@ class Base(nn.Module):
             optimizer.zero_grad()
             for batch in pbar:
                 # Move targets to device
-                target = [t.to(self.config.device) for t in batch[2]]
+                # Move targets to device
+                if torch.is_tensor(batch[2]):
+                    target = batch[2].to(self.config.device)
+                else:
+                    target = [t.to(self.config.device) for t in batch[2]]
 
                 # Move features to device
                 batch = tuple(t.to(self.config.device) for t in batch[0:2])
@@ -114,7 +118,7 @@ class Base(nn.Module):
             )
             hook_epoch(epoch)
 
-            if epoch % self.config.chechpoint_save_interval == 0:
+            if epoch % self.config.checkpoint_save_interval == 0:
                 logging.debug("Saving model checkpoint at Epoch {}".format(epoch))
                 model_path = os.path.join(
                     self.config.model_out, "model_checkpoint_epoch_{}.pth".format(epoch)
@@ -145,7 +149,10 @@ class Base(nn.Module):
 
         for batch in tqdm(dataloader_test, position=0, leave=True):
             # Move targets to device
-            target = [t.to(self.config.device) for t in batch[2]]
+            if torch.is_tensor(batch[2]):
+                target = batch[2].to(self.config.device)
+            else:
+                target = [t.to(self.config.device) for t in batch[2]]
 
             # Move features to device
             batch = tuple(t.to(self.config.device) for t in batch[0:2])
@@ -267,7 +274,7 @@ def parallel_fit(
         logging.info("Epoch={},avg-CE-Loss={}".format(epoch, np.array(losses).mean()))
         hook_epoch(epoch)
 
-        if epoch % config.chechpoint_save_interval == 0:
+        if epoch % config.checkpoint_save_interval == 0:
             logging.debug("Saving model checkpoint at Epoch {}".format(epoch))
             model_path = os.path.join(
                 config.model_out, "model_checkpoint_epoch_{}.pth".format(epoch)

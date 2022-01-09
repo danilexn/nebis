@@ -38,6 +38,7 @@ if __name__ == "__main__":
     # Load model
     logging.info("Loading '{}' model from {}".format(args.model, args.model_in))
     model = load(args.model_in)
+    model.to(args.device)
 
     dataset = get_datareader("{}_{}".format(args.model, args.downstream))(args)
     dataset.load()
