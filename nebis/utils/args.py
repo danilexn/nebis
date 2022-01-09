@@ -171,6 +171,12 @@ def argument_parser():
         help="Probability of dropout (while training) of the classification path",
     )
     parser.add_argument(
+        "--consensus_size",
+        default=10,
+        type=int,
+        help="Number of parallel poolers for consensus network",
+    )
+    parser.add_argument(
         "--mutome_heads",
         default=12,
         type=int,

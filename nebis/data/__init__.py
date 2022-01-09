@@ -7,6 +7,8 @@ from .dataset import (
 
 
 _datareader_dict = {
+    "setquenceconsensus_classification": MutationDatasetForClassification,
+    "setquenceconsensus_survival": MutationDatasetForSurvival,
     "setquence_classification": MutationDatasetForClassification,
     "setquence_survival": MutationDatasetForSurvival,
     "setomic_classification": OmicDatasetForClassification,

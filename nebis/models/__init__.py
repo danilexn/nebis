@@ -1,8 +1,12 @@
-from .setquence import SetQuence
+from .setquence import SetQuence, SetQuenceConsensus
 from .setomic import SetOmic
 from .base import Base
 
-_models = {"setquence": SetQuence, "setomic": SetOmic}
+_models = {
+    "setquence": SetQuence,
+    "setomic": SetOmic,
+    "setquenceconsensus": SetQuenceConsensus,
+}
 
 
 def get_model(name):
