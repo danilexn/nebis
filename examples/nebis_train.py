@@ -44,6 +44,10 @@ if __name__ == "__main__":
         logging.debug("#Creating logging directory at {}".format(args.log_dir))
         os.makedirs(args.log_dir)
 
+    if args.profile_dir is not None and not os.path.exists(args.profile_dir):
+        logging.debug("#Creating profiling directory at {}".format(args.model_out))
+        os.makedirs(args.profile_dir)
+
     if not os.path.exists(tb_dir):
         logging.debug("#Creating TensorBoard directory at {}".format(tb_dir))
         os.makedirs(tb_dir)
@@ -76,21 +80,41 @@ if __name__ == "__main__":
 
     logging.info("Training model")
     batch_size = args.single_batch * args.n_gpu
-    if not isinstance(model, DataParallel):
-        model.fit(
-            dataset.fitting(batch_size=batch_size),
-            dataset.predicting(batch_size=batch_size),
-            args,
-            hook_step=hook_step,
-        )
+
+    if args.profile_dir is not None:
+        if not isinstance(model, DataParallel):
+            model.profiled_fit(
+                args.profile_dir,
+                dataset.fitting(batch_size=batch_size),
+                dataset.predicting(batch_size=batch_size),
+                args,
+                hook_step=hook_step,
+            )
+        else:
+            profiled_parallel_fit(
+                args.profile_dir,
+                model,
+                dataset.fitting(batch_size=batch_size),
+                dataset.predicting(batch_size=batch_size),
+                args,
+                hook_step=hook_step,
+            )
     else:
-        parallel_fit(
-            model,
-            dataset.fitting(batch_size=batch_size),
-            dataset.predicting(batch_size=batch_size),
-            args,
-            hook_step=hook_step,
-        )
+        if not isinstance(model, DataParallel):
+            model.fit(
+                dataset.fitting(batch_size=batch_size),
+                dataset.predicting(batch_size=batch_size),
+                args,
+                hook_step=hook_step,
+            )
+        else:
+            parallel_fit(
+                model,
+                dataset.fitting(batch_size=batch_size),
+                dataset.predicting(batch_size=batch_size),
+                args,
+                hook_step=hook_step,
+            )
 
     logging.info("Saving trained model at {}".format(args.model_out))
     model_path = os.path.join(args.model_out, "model.pth")

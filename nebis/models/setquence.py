@@ -23,14 +23,16 @@ class SetQuence(Base):
 
     def forward(self, X_mutome=None, X_omics=None):
         # Select only the sequences that are not fully padded, up to split
-        input_ids = X_mutome.view(-1, self.config.sequence_length)
-        attention_mask = torch.where(input_ids > 0, 1, 0)
-        batch_size = int(
-            input_ids.flatten().shape[0]
-            / (self.config.sequence_length * self.config.max_mutations)
-        )
+        batch_size = X_mutome.shape[0]
+        input_ids = X_mutome.view(batch_size, -1, self.config.sequence_length)
 
-        if self.config.finetune:
+        if batch_size != 1 and X_mutome.shape[1] > self.config.max_mutations:
+            input_ids = input_ids[:, 0 : self.config.max_mutations, :]
+            input_ids = input_ids.view(-1, self.config.sequence_length)
+            attention_mask = torch.where(input_ids > 0, 1, 0)
+        elif batch_size == 1:
+            input_ids = X_mutome.view(-1, self.config.sequence_length)
+            attention_mask = torch.where(input_ids > 0, 1, 0)
             _attention = (
                 attention_mask.view(
                     batch_size, self.config.max_mutations, self.config.sequence_length
@@ -45,13 +47,13 @@ class SetQuence(Base):
             else:
                 max_length = max_length[0] - 1
 
-            if max_length > self.config.finetune_max_mutations:
-                max_length = self.config.finetune_max_mutations
+            if max_length > self.config.max_mutations:
+                max_length = self.config.max_mutations
 
-            # Apply filter to the input sequences and to the attention mask
             input_ids = input_ids[0:max_length, :]
             attention_mask = attention_mask[0:max_length, :]
 
+        if self.config.finetune:
             _, pooled_out = self.BERT(
                 input_ids,
                 attention_mask=attention_mask,

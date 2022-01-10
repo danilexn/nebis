@@ -279,10 +279,17 @@ def parallel_fit(
             else:
                 target = [t.to(model.module.config.device) for t in batch[2]]
 
-            # Move features to device
-            _batch = tuple(t.to(model.module.config.device) for t in batch[0:2])
+            if isinstance(batch[0], list):
+                batch[0] = [b.to(model.module.config.device) for b in batch[0]]
+            else:
+                batch[0] = batch[0].to(model.module.config.device)
 
-            inputs = {"X_mutome": _batch[0], "X_omics": _batch[1]}
+            if isinstance(batch[1], list):
+                batch[1] = [b.to(model.module.config.device) for b in batch[1]]
+            else:
+                batch[1] = batch[1].to(model.module.config.device)
+
+            inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
             Y, H = model.forward(**inputs)
 
             loss = model.module.loss(Y, target, weight=sample_weight,)
