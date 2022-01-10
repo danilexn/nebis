@@ -170,8 +170,8 @@ class SetQuenceConsensus(Base):
         Ps = [pooler(pooled_output) for pooler in self.Pooling]
 
         # Consensus by sum of logits
-        Y = torch.cat([P[0] for P in Ps], dim=0).median(0).view(batch_size, -1)
-        H = torch.cat([P[1] for P in Ps], dim=0).median(0).view(batch_size, -1)
+        Y = torch.cat([P[0] for P in Ps], dim=0).mean(dim=0).view(batch_size, -1)
+        H = torch.cat([P[1] for P in Ps], dim=0).mean(dim=0).view(batch_size, -1)
 
         # (downstream output, embeddings)
         return Y, H
