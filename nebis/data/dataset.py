@@ -236,8 +236,16 @@ class MutationDatasetForClassification(DatasetForClassification):
         else:
             raise ValueError("The file {} does not exist".format(cached_features_file))
 
-        seq_features = _torch_data[0].type(torch.int32)
-        targets = _torch_data[4].type(torch.long)
+        if isinstance(_torch_data[0], list):
+            seq_features = [t.type(torch.int32) for t in _torch_data[0]]
+        else:
+            seq_features = _torch_data[0].type(torch.int32)
+
+        if isinstance(_torch_data[4], list):
+            targets = [t.type(torch.long) for t in _torch_data[4]]
+        else:
+            targets = _torch_data[4].type(torch.long)
+
         dataset = TensorDataset(seq_features, seq_features, targets)
 
         return dataset
