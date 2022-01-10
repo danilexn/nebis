@@ -13,7 +13,7 @@ from torch.utils.data import (
 
 from nebis.utils.metrics import classification_metrics, classification_roc_auc
 from nebis.utils import get_survival_y_true
-from nebis.data.structures import SurvivalTensor
+from nebis.data.structures import SurvivalTensor, ListTensor
 
 
 class BaseDataset:
@@ -237,12 +237,12 @@ class MutationDatasetForClassification(DatasetForClassification):
             raise ValueError("The file {} does not exist".format(cached_features_file))
 
         if isinstance(_torch_data[0], list):
-            seq_features = [t.type(torch.int32) for t in _torch_data[0]]
+            seq_features = ListTensor([t.type(torch.int32) for t in _torch_data[0]])
         else:
             seq_features = _torch_data[0].type(torch.int32)
 
         if isinstance(_torch_data[4], list):
-            targets = [t.type(torch.long) for t in _torch_data[4]]
+            targets = ListTensor([t.type(torch.long) for t in _torch_data[4]])
         else:
             targets = _torch_data[4].type(torch.long)
 
