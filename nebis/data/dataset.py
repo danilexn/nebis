@@ -139,7 +139,11 @@ class DatasetForClassification(BaseDataset):
         assert self.dataset != None
 
         train, _ = self.dataset
-        target = train.tensors[2]
+
+        if isinstance(train.tensors[2], list):
+            target = torch.cat(train.tensors[2])
+        else:
+            target = train.tensors[2]
 
         class_sample_count = np.array(
             [len(np.where(target == t)[0]) for t in torch.unique(target)]
