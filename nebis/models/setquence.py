@@ -1,6 +1,7 @@
 # coding: utf-8
 import torch
 import torch.nn as nn
+from torch.nn.functional import normalize
 
 from transformers import BertModel
 from nebis.models.base import Base
@@ -105,6 +106,7 @@ class SetQuenceConsensus(Base):
         super().__init__(config)
         self.BERT = BertModel(self.config.bert_config) if BERT is None else BERT
         self.BertNorm = nn.LayerNorm(self.config.embedding_size)
+        self.LogitNorm = nn.LayerNorm(self.config.num_classes)
 
         self.Pooling = nn.ModuleList(
             [ConsensusPooler(self.config) for i in range(self.config.consensus_size)]
@@ -168,8 +170,8 @@ class SetQuenceConsensus(Base):
         Ps = [pooler(pooled_output) for pooler in self.Pooling]
 
         # Consensus by sum of logits
-        Y = torch.cat([P[0] for P in Ps], dim=0).sum(0).view(batch_size, -1)
-        H = torch.cat([P[1] for P in Ps], dim=0).sum(0).view(batch_size, -1)
+        Y = torch.cat([P[0] for P in Ps], dim=0).median(0).view(batch_size, -1)
+        H = torch.cat([P[1] for P in Ps], dim=0).median(0).view(batch_size, -1)
 
         # (downstream output, embeddings)
         return Y, H
