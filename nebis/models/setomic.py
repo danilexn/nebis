@@ -2,19 +2,16 @@
 import torch
 import torch.nn as nn
 
-from transformers import BertModel
 from nebis.models.base import Base
+from nebis.models import SetQuence
 from nebis.models.downstream import get_downstream
 from nebis.models.pooling import get_pooler
 
 
-class SetOmic(Base):
+class SetOmic(SetQuence):
     def __init__(self, config, BERT=None):
-        super().__init__(config)
-        self.BERT = BertModel(self.config.bert_config) if BERT is None else BERT
-        self.BertNorm = nn.LayerNorm(self.config.embedding_size)
+        super().__init__(config, BERT=BERT)
         self.OmicNorm = nn.LayerNorm(self.config.embedding_size)
-
         self.OmicEmbedding = nn.Embedding(
             self.config.max_numeric + 2, self.config.embedding_size, padding_idx=0
         )
@@ -24,34 +21,12 @@ class SetOmic(Base):
         self.OmicPosIdentifiers = nn.Parameter(
             torch.arange(1, self.config.max_numeric + 2, 1), requires_grad=False,
         )
-
         self.PoolerMutome = get_pooler(self.config.pooling_sequence)(self.config)
         self.PoolerOmics = get_pooler(self.config.pooling_numeric)(self.config)
-        self.Downstream = get_downstream(self.config.downstream)(self.config)
-        self.loss = self.Downstream.loss
-
-        # self.init_weights()
 
     def forward(self, X_mutome=None, X_omics=None):
-        # Select only the sequences that are not fully padded, up to split
-        input_ids = X_mutome.view(-1, self.config.sequence_length)
-        attention_mask = torch.where(input_ids > 0, 1, 0).to(self.config.device)
-        batch_size = int(
-            input_ids.flatten().shape[0]
-            / (self.config.sequence_length * self.config.max_mutations)
-        )
-
-        with torch.no_grad():
-            _, pooled_out = self.BERT(
-                input_ids,
-                attention_mask=attention_mask,
-                token_type_ids=None,
-                position_ids=None,
-                head_mask=None,
-            )
-
-        # Change dimensionality of BERT output
-        X_mutome = pooled_out.view(batch_size, -1, self.config.embedding_size)
+        batch_size = X_mutome.shape[0]
+        pooled_out = self.forward_BERT(X_mutome=None, X_omics=None)
 
         # Do the omics
         X_pos_omic_embed = self.OmicEmbedding(
@@ -59,6 +34,9 @@ class SetOmic(Base):
         )
         X_lev_omic_embed = self.OmicLevelEmbedding(X_omics)
         X_omics = X_pos_omic_embed[:, 1:, :] + X_lev_omic_embed
+
+        # Change dimensionality of BERT output
+        X_mutome = pooled_out.view(batch_size, -1, self.config.embedding_size)
 
         # Input is the encoding of BERT
         H_mutome = self.BertNorm(X_mutome)
@@ -99,46 +77,16 @@ class ConsensusPooler(Base):
         return [Y, H]
 
 
-class SetOmicConsensus(Base):
+class SetOmicConsensus(SetOmic):
     def __init__(self, config, BERT=None):
-        super().__init__(config)
-        self.BERT = BertModel(self.config.bert_config) if BERT is None else BERT
-
-        self.OmicEmbedding = nn.Embedding(
-            self.config.max_numeric + 2, self.config.embedding_size, padding_idx=0
-        )
-        self.OmicLevelEmbedding = nn.Embedding(
-            self.config.digitize_bins + 2, self.config.embedding_size, padding_idx=0
-        )
-        self.OmicPosIdentifiers = nn.Parameter(
-            torch.arange(1, self.config.max_numeric + 2, 1), requires_grad=False,
-        )
-
+        super(SetOmicConsensus).__init__(config, BERT=BERT)
         self.Pooling = nn.ModuleList(
             [ConsensusPooler(self.config) for i in range(self.config.consensus_size)]
         )
-        self.Downstream = get_downstream(self.config.downstream)(self.config)
-        self.loss = self.Downstream.loss
-
-        # self.init_weights()
 
     def forward(self, X_mutome=None, X_omics=None):
-        # Select only the sequences that are not fully padded, up to split
-        input_ids = X_mutome.view(-1, self.config.sequence_length)
-        attention_mask = torch.where(input_ids > 0, 1, 0).to(self.config.device)
-        batch_size = int(
-            input_ids.flatten().shape[0]
-            / (self.config.sequence_length * self.config.max_mutations)
-        )
-
-        with torch.no_grad():
-            _, pooled_out = self.BERT(
-                input_ids,
-                attention_mask=attention_mask,
-                token_type_ids=None,
-                position_ids=None,
-                head_mask=None,
-            )
+        batch_size = X_mutome.shape[0]
+        pooled_out = self.forward_BERT(X_mutome=None, X_omics=None)
 
         # Change dimensionality of BERT output
         X_mutome = pooled_out.view(batch_size, -1, self.config.embedding_size)

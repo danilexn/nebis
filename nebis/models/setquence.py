@@ -21,7 +21,7 @@ class SetQuence(Base):
 
         # self.init_weights()
 
-    def forward(self, X_mutome=None, X_omics=None):
+    def forward_BERT(self, X_mutome=None, X_omics=None):
         batch_size = X_mutome.shape[0]
         input_ids = X_mutome.view(batch_size, -1, self.config.sequence_length)
 
@@ -68,6 +68,12 @@ class SetQuence(Base):
                     head_mask=None,
                 )
 
+        return pooled_out
+
+    def forward(self, X_mutome=None, X_omics=None):
+        batch_size = X_mutome.shape[0]
+        pooled_out = self.forward_BERT(X_mutome=None, X_omics=None)
+
         # Change dimensionality of BERT output
         pooled_output = pooled_out.view(batch_size, -1, self.config.embedding_size)
 
@@ -100,68 +106,17 @@ class ConsensusPooler(Base):
         return [Y, H]
 
 
-class SetQuenceConsensus(Base):
+class SetQuenceConsensus(SetQuence):
     def __init__(self, config, BERT=None):
-        super().__init__(config)
-        self.BERT = BertModel(self.config.bert_config) if BERT is None else BERT
-        self.BertNorm = nn.LayerNorm(self.config.embedding_size)
-        self.LogitNorm = nn.LayerNorm(self.config.num_classes)
-
+        super(SetQuenceConsensus).__init__(config, BERT=BERT)
         self.Pooling = nn.ModuleList(
             [ConsensusPooler(self.config) for i in range(self.config.consensus_size)]
         )
-        self.Downstream = get_downstream(self.config.downstream)(self.config)
-        self.loss = self.Downstream.loss
-
-        # self.init_weights()
 
     def forward(self, X_mutome=None, X_omics=None):
         # Select only the sequences that are not fully padded, up to split
-        input_ids = X_mutome.view(-1, self.config.sequence_length)
-        attention_mask = torch.where(input_ids > 0, 1, 0)
-        batch_size = int(
-            input_ids.flatten().shape[0]
-            / (self.config.sequence_length * self.config.max_mutations)
-        )
-
-        if self.config.finetune:
-            _attention = (
-                attention_mask.view(
-                    batch_size, self.config.max_mutations, self.config.sequence_length
-                )
-                .max(dim=2)[0]
-                .view(batch_size, self.config.max_mutations, 1)
-            )
-
-            max_length = torch.where(_attention.flatten() == 0)[0]
-            if max_length.nelement() == 0:
-                max_length = self.config.max_mutations
-            else:
-                max_length = max_length[0] - 1
-
-            if max_length > self.config.finetune_max_mutations:
-                max_length = self.config.finetune_max_mutations
-
-            # Apply filter to the input sequences and to the attention mask
-            input_ids = input_ids[0:max_length, :]
-            attention_mask = attention_mask[0:max_length, :]
-
-            _, pooled_out = self.BERT(
-                input_ids,
-                attention_mask=attention_mask,
-                token_type_ids=None,
-                position_ids=None,
-                head_mask=None,
-            )
-        else:
-            with torch.no_grad():
-                _, pooled_out = self.BERT(
-                    input_ids,
-                    attention_mask=attention_mask,
-                    token_type_ids=None,
-                    position_ids=None,
-                    head_mask=None,
-                )
+        batch_size = X_mutome.shape[0]
+        pooled_out = self.forward_BERT(X_mutome=None, X_omics=None)
 
         # Change dimensionality of BERT output
         pooled_output = pooled_out.view(batch_size, -1, self.config.embedding_size)
