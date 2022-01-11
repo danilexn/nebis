@@ -26,7 +26,7 @@ class SetOmic(SetQuence):
 
     def forward(self, X_mutome=None, X_omics=None):
         batch_size = X_mutome.shape[0]
-        pooled_out = self.forward_BERT(X_mutome=None, X_omics=None)
+        pooled_out = self.forward_BERT(X_mutome=X_mutome, X_omics=X_omics)
 
         # Do the omics
         X_pos_omic_embed = self.OmicEmbedding(
@@ -86,7 +86,7 @@ class SetOmicConsensus(SetOmic):
 
     def forward(self, X_mutome=None, X_omics=None):
         batch_size = X_mutome.shape[0]
-        pooled_out = self.forward_BERT(X_mutome=None, X_omics=None)
+        pooled_out = self.forward_BERT(X_mutome=X_mutome, X_omics=X_omics)
 
         # Change dimensionality of BERT output
         X_mutome = pooled_out.view(batch_size, -1, self.config.embedding_size)

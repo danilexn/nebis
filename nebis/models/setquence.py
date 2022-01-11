@@ -72,7 +72,7 @@ class SetQuence(Base):
 
     def forward(self, X_mutome=None, X_omics=None):
         batch_size = X_mutome.shape[0]
-        pooled_out = self.forward_BERT(X_mutome=None, X_omics=None)
+        pooled_out = self.forward_BERT(X_mutome=X_mutome, X_omics=X_omics)
 
         # Change dimensionality of BERT output
         pooled_output = pooled_out.view(batch_size, -1, self.config.embedding_size)
@@ -116,7 +116,7 @@ class SetQuenceConsensus(SetQuence):
     def forward(self, X_mutome=None, X_omics=None):
         # Select only the sequences that are not fully padded, up to split
         batch_size = X_mutome.shape[0]
-        pooled_out = self.forward_BERT(X_mutome=None, X_omics=None)
+        pooled_out = self.forward_BERT(X_mutome=X_mutome, X_omics=X_omics)
 
         # Change dimensionality of BERT output
         pooled_output = pooled_out.view(batch_size, -1, self.config.embedding_size)
