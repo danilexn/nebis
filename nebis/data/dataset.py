@@ -52,9 +52,23 @@ class BaseDataset:
     def predicting(self, batch_size=1):
         assert self.dataset != None
 
+        def collate_fn(batch):
+            _batch = []
+            for i in range(len(batch[0])):
+                _minibatch = []
+                for j in range(len(batch)):
+                    _minibatch.append(batch[j][i])
+                _batch.append(_minibatch)
+            return _batch
+
         _, test = self.dataset
         sampler = SequentialSampler(test)
-        dataloader = DataLoader(test, sampler=sampler, batch_size=batch_size,)
+        if isinstance(test.tensors[0], ListTensor):
+            dataloader = DataLoader(
+                test, sampler=sampler, batch_size=batch_size, collate_fn=collate_fn
+            )
+        else:
+            dataloader = DataLoader(test, sampler=sampler, batch_size=batch_size)
 
         return dataloader
 
