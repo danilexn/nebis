@@ -89,7 +89,6 @@ class DatasetForSurvival(BaseDataset):
 
 class MutationDatasetForSurvival(DatasetForSurvival):
     def _load_torch(self, data_dir):
-
         cached_features_file = data_dir
 
         if os.path.exists(cached_features_file):
@@ -97,7 +96,10 @@ class MutationDatasetForSurvival(DatasetForSurvival):
         else:
             raise ValueError("The file {} does not exist".format(cached_features_file))
 
-        _input_ids = _torch_data[0].type(torch.int32)
+        if isinstance(_torch_data[0], list):
+            seq_features = ListTensor([t.type(torch.int32) for t in _torch_data[0]])
+        else:
+            seq_features = _torch_data[0].type(torch.int32)
 
         all_surv_E = _torch_data[6]
         all_T = _torch_data[7]
@@ -105,7 +107,6 @@ class MutationDatasetForSurvival(DatasetForSurvival):
             all_T, all_surv_E, self.config.num_times
         )
 
-        seq_features = _input_ids
         targets = SurvivalTensor((all_surv_E, all_T, all_surv_T, time_points))
         dataset = TensorDataset(seq_features, seq_features, targets)
 
@@ -244,20 +245,46 @@ class OmicDatasetForClassification(DatasetForClassification):
         else:
             raise ValueError("The file {} does not exist".format(cached_features_file))
 
-        _input_ids = _torch_data[0].type(torch.int32)
-        _expression = torch.tensor(
-            np.digitize(
-                _torch_data[3],
-                bins=np.linspace(
-                    self.config.digitize_min,
-                    self.config.digitize_max,
-                    self.config.digitize_bins,
-                ),
+        if isinstance(_torch_data[0], list):
+            seq_features = ListTensor([t.type(torch.int32) for t in _torch_data[0]])
+        else:
+            seq_features = _torch_data[0].type(torch.int32)
+
+        if isinstance(_torch_data[3], list):
+            _expression = ListTensor(
+                [
+                    torch.tensor(
+                        np.digitize(
+                            t,
+                            bins=np.linspace(
+                                self.config.digitize_min,
+                                self.config.digitize_max,
+                                self.config.digitize_bins,
+                            ),
+                        )
+                    )
+                    for t in _torch_data[3]
+                ]
             )
-        )
-        seq_features = _input_ids
+        else:
+            _expression = torch.tensor(
+                np.digitize(
+                    _torch_data[3],
+                    bins=np.linspace(
+                        self.config.digitize_min,
+                        self.config.digitize_max,
+                        self.config.digitize_bins,
+                    ),
+                )
+            )
+
         numeric_features = _expression
-        targets = _torch_data[4].type(torch.long)
+
+        if isinstance(_torch_data[4], list):
+            targets = ListTensor([t.type(torch.long) for t in _torch_data[4]])
+        else:
+            targets = _torch_data[4].type(torch.long)
+
         dataset = TensorDataset(seq_features, numeric_features, targets)
 
         return dataset
