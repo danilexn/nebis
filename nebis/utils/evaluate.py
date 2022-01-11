@@ -10,6 +10,8 @@ from nebis.utils.metrics import (
 
 class ClassificationEvaluator:
     def __init__(self, Ys, Ps) -> None:
+        if isinstance(Ys[0], list):
+            Ys = [item for sublist in Ys for item in sublist]
         self.Y = np.concatenate(Ys)
         self.Y_preds = np.concatenate([P[1]["label"] for P in Ps])
         self.Y_probs = np.concatenate([P[1]["predicted"] for P in Ps])
