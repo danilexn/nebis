@@ -23,7 +23,7 @@ class ListDataParallel(DataParallel):
 
         new_inputs = [{} for _ in self.device_ids[0:_batch_size]]
         for key in kwargs:
-            for i, device in enumerate(self.device_ids):
+            for i, device in enumerate(self.device_ids[0:_batch_size]):
                 new_inputs[i][key] = kwargs[key][i].to(device)
 
         nones = [[] for _ in self.device_ids[0:_batch_size]]
