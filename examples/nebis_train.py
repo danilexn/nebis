@@ -31,7 +31,9 @@ if __name__ == "__main__":
 
     tb_dir = os.path.join(
         args.log_dir,
-        "SetOmic_pretrain_{}_{}_{}_{}_{}_{}".format(
+        "{}_{}_{}_{}_{}_{}_{}_{}".format(
+            args.model,
+            args.downstream,
             DATE,
             args.digitize_bins,
             args.p_dropout,
@@ -39,6 +41,28 @@ if __name__ == "__main__":
             args.pooling_sequence,
             args.activation,
         ),
+    )
+
+    if not os.path.exists(args.log_dir):
+        logging.debug("#Creating logging directory at {}".format(args.log_dir))
+        os.makedirs(args.log_dir)
+
+    logging.basicConfig(
+        format="%(asctime)s:%(levelname)s:%(message)s",
+        filename=os.path.join(
+            args.log_dir,
+            "{}_{}_{}_{}_{}_{}_{}_{}.log".format(
+                args.model,
+                args.downstream,
+                DATE,
+                args.digitize_bins,
+                args.p_dropout,
+                args.learning_rate,
+                args.pooling_sequence,
+                args.activation,
+            ),
+        ),
+        level=logging.DEBUG,
     )
 
     if not os.path.exists(args.log_dir):
