@@ -237,6 +237,12 @@ def argument_parser():
         "--n_gpu", default=1, type=int, help="Number of GPUs for training",
     )
     parser.add_argument(
+        "--list_dataparallel",
+        dest="list_dataparallel",
+        action="store_true",
+        help="Use ListDataParallel instead of DataParallel for parallelisation",
+    )
+    parser.add_argument(
         "--seed", default=2022, type=int, help="Random seed",
     )
 

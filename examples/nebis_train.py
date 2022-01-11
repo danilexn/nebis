@@ -6,6 +6,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.nn import DataParallel
 
 from nebis.data import get_datareader
+from nebis.utils.parallel import ListDataParallel
 from nebis.models import get_model, parallel_fit, profiled_parallel_fit
 from nebis.utils.args import argument_parser
 from nebis.utils import set_seed
@@ -68,9 +69,13 @@ if __name__ == "__main__":
     # Create model
     logging.info("Creating '{}' model".format(args.model))
     model = get_model(args.model)(args, BERT=pretrained_bert)
-    if args.n_gpu > 1:
+
+    if args.n_gpu > 1 and not args.list_dataparallel:
         logging.info("Parallelising model over {} GPUs".format(args.n_gpu))
         model = DataParallel(model)
+    elif args.n_gpu > 1 and args.list_dataparallel:
+        logging.info("Parallelising model for list over {} GPUs".format(args.n_gpu))
+        model = ListDataParallel(model)
 
     model.to(args.device)
 
