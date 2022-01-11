@@ -77,8 +77,9 @@ class Base(nn.Module):
             optimizer.zero_grad()
             for batch in pbar:
                 batch = move_batch_to_device(batch, self.config.device)
-
                 inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
+                target = batch[2]
+
                 Y, H = self.forward(**inputs)
 
                 loss = self.loss(Y, target, weight=sample_weight,)
@@ -145,13 +146,9 @@ class Base(nn.Module):
         dataloader_test = dataset_test
 
         for batch in tqdm(dataloader_test, position=0, leave=True):
-            # Move targets to device
             batch = move_batch_to_device(batch, self.config.device)
-
-            # Move features to device
-            _batch = tuple(t.to(self.config.device) for t in batch[0:2])
-
             inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
+            target = batch[2]
 
             with torch.no_grad():
                 Y, H = self.forward(**inputs)
@@ -197,7 +194,6 @@ def parallel_predict(model, dataset_test, hook=None):
 
     for batch in tqdm(dataloader_test, position=0, leave=True):
         batch = move_batch_to_device(batch, model.module.config.device)
-
         inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
 
         with torch.no_grad():
@@ -257,9 +253,10 @@ def parallel_fit(
         pbar = tqdm(dataloader_train, position=0, leave=False)
         optimizer.zero_grad()
         for batch in pbar:
-            # Move targets to device
             batch = move_batch_to_device(batch, model.module.config.device)
             inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
+            target = batch[2]
+
             Y, H = model.forward(**inputs)
 
             loss = model.module.loss(Y, target, weight=sample_weight,)
