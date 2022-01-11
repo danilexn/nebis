@@ -148,16 +148,15 @@ class Base(nn.Module):
         for batch in tqdm(dataloader_test, position=0, leave=True):
             batch = move_batch_to_device(batch, self.config.device)
             inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
-            target = batch[2]
 
             with torch.no_grad():
                 Y, H = self.forward(**inputs)
 
             Y_pred = self.Downstream.prediction(Y.detach())
             if torch.is_tensor(batch[2]):
-                target = target.detach().cpu().numpy()
+                target = batch[2].detach().cpu().numpy()
             else:
-                target = [t.detach().cpu().numpy() for t in target]
+                target = [t.detach().cpu().numpy() for t in batch[2]]
 
             Ps.append([Y, Y_pred])
             Ys.append(target)
@@ -201,9 +200,9 @@ def parallel_predict(model, dataset_test, hook=None):
 
         Y_pred = model.module.Downstream.prediction(Y.detach())
         if torch.is_tensor(batch[2]):
-            target = target.detach().cpu().numpy()
+            target = batch[2].detach().cpu().numpy()
         else:
-            target = [t.detach().cpu().numpy() for t in target]
+            target = [t.detach().cpu().numpy() for t in batch[2]]
 
         Ps.append([Y, Y_pred])
         Ys.append(target)
