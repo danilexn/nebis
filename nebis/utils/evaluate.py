@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 
 from nebis.utils.metrics import (
@@ -14,9 +15,13 @@ class ClassificationEvaluator:
         self.Y_probs = np.concatenate([P[1]["predicted"] for P in Ps])
 
     def evaluate(self):
-        metrics = classification_metrics(self.Y_preds, self.Y)
-        fpr, tpr, roc_auc = classification_roc_auc(self.Y, self.Y_probs)
-        return metrics
+        try:
+            metrics = classification_metrics(self.Y_preds, self.Y)
+            fpr, tpr, roc_auc = classification_roc_auc(self.Y, self.Y_probs)
+            return metrics
+        except Exception as e:
+            logging.error(e)
+            return None
 
 
 class SurvivalEvaluator:
@@ -28,9 +33,17 @@ class SurvivalEvaluator:
         self.time_points = Ys[0][3]
 
     def evaluate(self):
-        return survival_metrics(
-            self.Y_true_T, self.Y_true_E, self.Y_pred_r, self.Y_pred_s, self.time_points
-        )
+        try:
+            return survival_metrics(
+                self.Y_true_T,
+                self.Y_true_E,
+                self.Y_pred_r,
+                self.Y_pred_s,
+                self.time_points,
+            )
+        except Exception as e:
+            logging.error(e)
+            return None
 
 
 _evaluator_dict = {
