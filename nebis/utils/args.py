@@ -132,11 +132,7 @@ def argument_parser():
         help="Directory for logging",
     )
     parser.add_argument(
-        "--profile_dir",
-        default=None,
-        type=str,
-        required=True,
-        help="The location of the profiling",
+        "--profile_dir", default=None, type=str, help="The location of the profiling",
     )
     parser.add_argument(
         "--num_classes",
