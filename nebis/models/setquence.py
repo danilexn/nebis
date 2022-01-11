@@ -1,4 +1,5 @@
 # coding: utf-8
+from multiprocessing import Value
 import torch
 import torch.nn as nn
 from torch.nn.functional import normalize
@@ -12,7 +13,7 @@ from nebis.models.pooling import get_pooler
 class SetQuence(Base):
     def __init__(self, config, BERT=None):
         super().__init__(config)
-        self.BERT = BertModel(self.config.bert_config) if BERT is None else BERT
+        self.BERT = self.get_BERT_model(BERT)
         self.BertNorm = nn.LayerNorm(self.config.embedding_size)
 
         self.Pooling = get_pooler(self.config.pooling_sequence)(self.config)
@@ -20,6 +21,16 @@ class SetQuence(Base):
         self.loss = self.Downstream.loss
 
         # self.init_weights()
+
+    def get_BERT_model(self, BERT):
+        if BERT is None:
+            return BertModel(self.config.bert_config)
+        elif isinstance(BERT, BertModel):
+            return BERT
+        elif isinstance(BERT, SetQuence):
+            return BERT.BERT
+        else:
+            raise ValueError("Could not load a BERT model")
 
     def forward_BERT(self, X_mutome=None, X_omics=None):
         batch_size = X_mutome.shape[0]
