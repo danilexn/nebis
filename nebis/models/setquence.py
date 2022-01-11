@@ -22,7 +22,6 @@ class SetQuence(Base):
         # self.init_weights()
 
     def forward(self, X_mutome=None, X_omics=None):
-        # Select only the sequences that are not fully padded, up to split
         batch_size = X_mutome.shape[0]
         input_ids = X_mutome.view(batch_size, -1, self.config.sequence_length)
 
@@ -34,11 +33,9 @@ class SetQuence(Base):
             input_ids = X_mutome.view(-1, self.config.sequence_length)
             attention_mask = torch.where(input_ids > 0, 1, 0)
             _attention = (
-                attention_mask.view(
-                    batch_size, self.config.max_mutations, self.config.sequence_length
-                )
+                attention_mask.view(batch_size, -1, self.config.sequence_length)
                 .max(dim=2)[0]
-                .view(batch_size, self.config.max_mutations, 1)
+                .view(batch_size, -1, 1)
             )
 
             max_length = torch.where(_attention.flatten() == 0)[0]
