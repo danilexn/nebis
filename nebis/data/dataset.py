@@ -140,10 +140,14 @@ class DatasetForClassification(BaseDataset):
 
         train, _ = self.dataset
 
-        if isinstance(train.tensors[2], list):
-            target = torch.cat(train.tensors[2])
-        else:
+        if isinstance(train.tensors[2], ListTensor):
+            target = train.tensors[2].to_tensor()
+        elif torch.is_tensor(train.tensors[2]):
             target = train.tensors[2]
+        else:
+            raise ValueError(
+                "Target tensor must be either a ListTensor or a torch.tensor"
+            )
 
         class_sample_count = np.array(
             [len(np.where(target == t)[0]) for t in torch.unique(target)]
@@ -167,9 +171,24 @@ class DatasetForClassification(BaseDataset):
                 self.config.device
             )
 
+        def collate_fn(batch):
+            _batch = []
+            for i in range(len(batch[0])):
+                _minibatch = []
+                for j in range(len(batch)):
+                    _minibatch.append(batch[j][i])
+                _batch.append(_minibatch)
+            return _batch
+
         # Create sampler and dataloader
         sampler = SequentialSampler(train)
-        dataloader = DataLoader(train, sampler=sampler, batch_size=batch_size,)
+
+        if isinstance(train.tensors[0], ListTensor):
+            dataloader = DataLoader(
+                train, sampler=sampler, batch_size=batch_size, collate_fn=collate_fn
+            )
+        else:
+            dataloader = DataLoader(train, sampler=sampler, batch_size=batch_size)
 
         return dataloader, normedWeights
 

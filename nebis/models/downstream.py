@@ -127,7 +127,9 @@ class DownTaskClassification(nn.Module):
         }
 
     def loss(self, pred, target, weight=None):
-        target = target[0] if type(target) is list else target
+        if isinstance(target, list):
+            target = torch.cat(target)
+
         target = target.view(-1)
         pred = pred.view(-1, self.config.num_classes)
         return cross_entropy_loss(pred, target, weight)

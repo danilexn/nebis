@@ -13,7 +13,7 @@ import torch.optim as optim
 import torch.profiler
 
 from nebis.utils.schedule import get_linear_schedule_with_warmup
-from nebis.utils import empty_hook
+from nebis.utils import empty_hook, move_batch_to_device
 from nebis.utils.evaluate import get_evaluator
 
 
@@ -76,17 +76,9 @@ class Base(nn.Module):
             pbar = tqdm(dataloader_train, position=0, leave=False)
             optimizer.zero_grad()
             for batch in pbar:
-                # Move targets to device
-                # Move targets to device
-                if torch.is_tensor(batch[2]):
-                    target = batch[2].to(self.config.device)
-                else:
-                    target = [t.to(self.config.device) for t in batch[2]]
+                batch = move_batch_to_device(batch, self.config.device)
 
-                # Move features to device
-                _batch = tuple(t.to(self.config.device) for t in batch[0:2])
-
-                inputs = {"X_mutome": _batch[0], "X_omics": _batch[1]}
+                inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
                 Y, H = self.forward(**inputs)
 
                 loss = self.loss(Y, target, weight=sample_weight,)
@@ -106,6 +98,7 @@ class Base(nn.Module):
                     target = target.detach().cpu().numpy()
                 else:
                     target = [t.detach().cpu().numpy() for t in target]
+
                 targets += list(target)
 
                 embeddings.append(H.detach().cpu().numpy())
@@ -153,15 +146,12 @@ class Base(nn.Module):
 
         for batch in tqdm(dataloader_test, position=0, leave=True):
             # Move targets to device
-            if torch.is_tensor(batch[2]):
-                target = batch[2].to(self.config.device)
-            else:
-                target = [t.to(self.config.device) for t in batch[2]]
+            batch = move_batch_to_device(batch, self.config.device)
 
             # Move features to device
             _batch = tuple(t.to(self.config.device) for t in batch[0:2])
 
-            inputs = {"X_mutome": _batch[0], "X_omics": _batch[1]}
+            inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
 
             with torch.no_grad():
                 Y, H = self.forward(**inputs)
@@ -206,15 +196,9 @@ def parallel_predict(model, dataset_test, hook=None):
     dataloader_test = dataset_test
 
     for batch in tqdm(dataloader_test, position=0, leave=True):
-        if torch.is_tensor(batch[2]):
-            target = batch[2].to(model.module.config.device)
-        else:
-            target = [t.to(model.module.config.device) for t in batch[2]]
+        batch = move_batch_to_device(batch, model.module.config.device)
 
-        # Move features to device
-        _batch = tuple(t.to(model.module.config.device) for t in batch[0:2])
-
-        inputs = {"X_mutome": _batch[0], "X_omics": _batch[1]}
+        inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
 
         with torch.no_grad():
             Y, H = model.forward(**inputs)
@@ -274,21 +258,7 @@ def parallel_fit(
         optimizer.zero_grad()
         for batch in pbar:
             # Move targets to device
-            if torch.is_tensor(batch[2]):
-                target = batch[2].to(model.module.config.device)
-            else:
-                target = [t.to(model.module.config.device) for t in batch[2]]
-
-            if isinstance(batch[0], list):
-                batch[0] = [b.to(model.module.config.device) for b in batch[0]]
-            else:
-                batch[0] = batch[0].to(model.module.config.device)
-
-            if isinstance(batch[1], list):
-                batch[1] = [b.to(model.module.config.device) for b in batch[1]]
-            else:
-                batch[1] = batch[1].to(model.module.config.device)
-
+            batch = move_batch_to_device(batch, model.module.config.device)
             inputs = {"X_mutome": batch[0], "X_omics": batch[1]}
             Y, H = model.forward(**inputs)
 

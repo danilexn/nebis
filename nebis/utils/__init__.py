@@ -50,3 +50,17 @@ def get_time_points(T_max, num_times, extra_time_percent=0.1):
     time_points = np.linspace(0, T_max * (1 + extra_time_percent), num_times + 1)
 
     return time_points
+
+
+def move_batch_to_device(batch, device):
+    for i in range(len(batch)):
+        if isinstance(batch[i], list):
+            batch[i] = [b.to(device) for b in batch[i]]
+        elif torch.is_tensor(batch[i]):
+            batch[i] = batch[i].to(device)
+        else:
+            raise ValueError(
+                "Each element of the batch has to be eiter a list or a torch.tensor object"
+            )
+
+    return batch
