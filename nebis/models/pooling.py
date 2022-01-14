@@ -74,7 +74,7 @@ class PoolingISAB(BasePooler):
             self.config.embedding_size, self.config.embedding_size, bias=False
         )
 
-        self.IdentityMAB = MAB(
+        self.InducingMAB = MAB(
             self.config.embedding_size,
             self.config.mutome_heads,
             batch_first=True,
@@ -101,11 +101,11 @@ class PoolingISAB(BasePooler):
         batch_size = X.shape[0]
         I = self.I.repeat(batch_size, 1, 1)
 
-        H = self.IdentityMAB(self.rFF_I_mutome(I), X,)
+        H = self.InducingMAB(self.rFF_I_mutome(I), X,)
 
         # Calculate the self-attention in
         # sub-quadratic time
-        Z = self.MutomeMAB(H, H,)
+        Z = self.MutomeMAB(X, H,)
 
         # Performs the multi-head dot-product
         # attention pooling
