@@ -53,6 +53,43 @@ class SetOmic(SetQuence):
         return Y, H
 
 
+class SetOnlyOmic(Base):
+    def __init__(self, config, BERT=None):
+        super().__init__(config)
+        self.OmicNorm = nn.LayerNorm(self.config.embedding_size)
+        self.OmicEmbedding = nn.Embedding(
+            self.config.max_numeric + 2, self.config.embedding_size, padding_idx=0
+        )
+        self.OmicLevelEmbedding = nn.Embedding(
+            self.config.digitize_bins + 2, self.config.embedding_size, padding_idx=0
+        )
+        self.OmicPosIdentifiers = nn.Parameter(
+            torch.arange(1, self.config.max_numeric + 2, 1), requires_grad=False,
+        )
+
+        self.PoolerOmics = get_pooler(self.config.pooling_numeric)(self.config)
+
+    def forward(self, X_mutome=None, X_omics=None):
+        batch_size = X_omics.shape[0]
+
+        # Do the omics
+        X_pos_omic_embed = self.OmicEmbedding(
+            self.OmicPosIdentifiers.repeat(batch_size, 1)
+        )
+        X_lev_omic_embed = self.OmicLevelEmbedding(X_omics)
+        X_omics = X_pos_omic_embed[:, 1:, :] + X_lev_omic_embed
+
+        H_omics = self.OmicNorm(X_omics)
+        H_omics = self.PoolerOmics(H_omics)
+
+        H = H_omics[:, 0, :]
+        H = H.view(-1, 1, self.config.embedding_size)
+        Y = self.Downstream(H)
+
+        # (downstream output, embeddings)
+        return Y, H
+
+
 class ConsensusPooler(Base):
     def __init__(self, config):
         super().__init__(config)

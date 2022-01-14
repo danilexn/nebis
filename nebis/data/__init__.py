@@ -13,6 +13,8 @@ _datareader_dict = {
     "setquence_survival": MutationDatasetForSurvival,
     "setomic_classification": OmicDatasetForClassification,
     "setomic_survival": OmicDatasetForSurvival,
+    "setonlyomic_classification": OmicDatasetForClassification,
+    "setonlyomic_survival": OmicDatasetForSurvival,
     "setomicconsensus_classification": OmicDatasetForClassification,
     "setomicconsensus_survival": OmicDatasetForSurvival,
 }
