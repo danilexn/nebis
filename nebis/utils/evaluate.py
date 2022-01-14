@@ -22,7 +22,7 @@ class ClassificationEvaluator:
             fpr, tpr, roc_auc = classification_roc_auc(self.Y, self.Y_probs)
             return metrics
         except Exception as e:
-            logging.error(e)
+            print(e)
             return None
 
 
@@ -44,7 +44,7 @@ class SurvivalEvaluator:
                 self.time_points,
             )
         except Exception as e:
-            logging.error(e)
+            print(e)
             return None
 
 
