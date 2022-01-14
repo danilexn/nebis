@@ -64,7 +64,7 @@ class PoolingISAB(BasePooler):
             torch.Tensor(1, self.config.k_seeds, self.config.embedding_size)
         )
         self.I = nn.Parameter(
-            torch.Tensor(1, self.config.k_identity, self.config.embedding_size)
+            torch.Tensor(1, self.config.k_inducing, self.config.embedding_size)
         )
 
         self.rFF_S_mutome = nn.Linear(

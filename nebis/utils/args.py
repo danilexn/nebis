@@ -168,6 +168,12 @@ def argument_parser():
         help="Number of seeds for the Multi-head attention layer(s)",
     )
     parser.add_argument(
+        "--k_inducing",
+        default=50,
+        type=int,
+        help="Number of seeds for the Multi-head attention layer(s)",
+    )
+    parser.add_argument(
         "--p_dropout",
         default=0.3,
         type=float,
