@@ -33,7 +33,8 @@ class PoolingPMA(BasePooler):
         super().__init__(config)
 
         self.S = nn.Parameter(
-            torch.Tensor(1, self.config.k_seeds, self.config.embedding_size)
+            torch.Tensor(1, self.config.k_seeds, self.config.embedding_size),
+            requires_grad=False,
         )
 
         self.rFF_S_mutome = nn.Linear(
@@ -61,10 +62,17 @@ class PoolingISAB(BasePooler):
         super().__init__(config)
 
         self.S = nn.Parameter(
-            torch.Tensor(1, self.config.k_seeds, self.config.embedding_size)
+            torch.Tensor(
+                1, self.config.k_seeds, self.config.embedding_size, requires_grad=False,
+            )
         )
         self.I = nn.Parameter(
-            torch.Tensor(1, self.config.k_inducing, self.config.embedding_size)
+            torch.Tensor(
+                1,
+                self.config.k_inducing,
+                self.config.embedding_size,
+                requires_grad=False,
+            )
         )
 
         self.rFF_S_mutome = nn.Linear(
@@ -119,7 +127,8 @@ class PoolingMAB(BasePooler):
         super().__init__(config)
 
         self.S = nn.Parameter(
-            torch.Tensor(1, self.config.k_seeds, self.config.embedding_size)
+            torch.Tensor(1, self.config.k_seeds, self.config.embedding_size),
+            requires_grad=False,
         )
 
         self.rFF_S_mutome = nn.Linear(
@@ -183,7 +192,8 @@ class PoolingRNNPMA(PoolingRNN):
         super().__init__(config)
 
         self.S = nn.Parameter(
-            torch.Tensor(1, self.config.k_seeds, self.config.embedding_size)
+            torch.Tensor(1, self.config.k_seeds, self.config.embedding_size),
+            requires_grad=False,
         )
         self.rFF_S_mutome = nn.Linear(
             self.config.embedding_size, self.config.embedding_size, bias=False
