@@ -149,8 +149,8 @@ python nebis_predict.py \
 
 With the above command, either _SetQuence_ or _SetOmic_ model will be loaded from `MODEL_DIR` , and predictions made on the dataset at `DATA_PATH` will be saved at the directory `PREDICTION_DIR`.
 
-## XAI analysis
+## Data Availability
 
-Work in progress
+Datasets (.torch files) used for training and testing SetQuence and SetOmic are available [here](https://drive.google.com/drive/folders/1zPBb8gO5DWvm-5YDTkmCQtn56xRKIdFP?usp=sharing). Models are included in the Docker containers.
 
 
